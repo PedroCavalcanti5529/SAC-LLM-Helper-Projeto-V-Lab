@@ -1,0 +1,253 @@
+{
+  "kind": "comparison",
+  "comparison_id": "cmp-20261122-171012-32b070",
+  "timestamp": "2026-11-22T17:10:12-03:00",
+  "customer_id": "c01",
+  "ticket": {
+    "id": "t02",
+    "text": "O Wi-Fi cai várias vezes por dia, principalmente à noite. No quarto do fundo quase não pega. Na sala, perto do roteador, funciona normal."
+  },
+  "content_type": "resolution_steps",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "config": {
+    "temperature": 0.2,
+    "max_output_tokens": 4096
+  },
+  "versions": [
+    "v1",
+    "v2",
+    "v3"
+  ],
+  "winner": null,
+  "runs": [
+    {
+      "kind": "generation",
+      "run_id": "20261122-165630-8a5637",
+      "timestamp": "2026-11-22T16:56:30-03:00",
+      "customer_id": "c01",
+      "customer_profile": {
+        "id": "c01",
+        "name": "Marta Oliveira",
+        "technical_level": "leigo",
+        "communication_style": "didatico",
+        "channel": "telefone",
+        "plan": "FIBRA-300",
+        "notes": "72 anos, usa a internet para videochamadas com a família. Prefere ser guiada passo a passo."
+      },
+      "ticket": {
+        "id": "t02",
+        "text": "O Wi-Fi cai várias vezes por dia, principalmente à noite. No quarto do fundo quase não pega. Na sala, perto do roteador, funciona normal."
+      },
+      "content_type": "resolution_steps",
+      "prompt_version": "v1",
+      "prompt_layers": {
+        "base": false,
+        "domain": false,
+        "tasks": "v1",
+        "role": "v1/role.md"
+      },
+      "template_hash": "2fcd2055d8ec493d568bb0f45c6ad61c4e831abf43ba6cb9597cb8c30f91b6e8",
+      "provider": "gemini",
+      "model": "gemini-3.5-flash-lite",
+      "config": {
+        "temperature": 0.2,
+        "max_output_tokens": 4096
+      },
+      "cache_key": "d69187a2687decd7d13b06e6597d1678ed341ff6b5dd3978b47146da2d956743",
+      "cached": false,
+      "attempts": 1,
+      "latency_ms": 2193,
+      "output": {
+        "opening": "Olá, dona Marta! Não se preocupe, vamos resolver isso juntas para a Senhora conseguir falar com a sua família sem cortes.",
+        "steps": [
+          {
+            "step": 1,
+            "instruction": "Vamos dar uma pausa no nosso aparelhinho de internet (o roteador). Vá até a caixinha preta ou branca que fica na sala e tire o fio da tomada.",
+            "why": "Isso serve para limpar a memória do aparelho e ajudar a melhorar o sinal."
+          },
+          {
+            "step": 2,
+            "instruction": "Espere contar até dez devagarzinho, respirando fundo, e depois coloque o fio da tomada de volta no lugar.",
+            "why": "Esse tempinho é necessário para o aparelho desligar por completo."
+          },
+          {
+            "step": 3,
+            "instruction": "Agora, vamos esperar um minutinho até as luzes do aparelho acenderem e ficarem verdinhas ou azuis.",
+            "why": "É o tempo que ele leva para religar e voltar a funcionar direitinho."
+          },
+          {
+            "step": 4,
+            "instruction": "Sobre o sinal no quarto do fundo, como ele é longe da sala, barreiras como paredes grossas atrapalham. Tente deixar a porta do quarto aberta na hora da videochamada para ver se o sinal melhora.",
+            "why": "As paredes bloqueiam um pouco a onda do Wi-Fi, e a porta aberta ajuda o sinal a chegar mais longe."
+          }
+        ],
+        "closing": "Deu tudo certo com as luzinhas do aparelho, dona Marta? Se continuar caindo à noite, me avise que eu te ajudo de novo com todo o carinho.",
+        "escalation": "Caso a internet continue caindo mesmo com o roteador reiniciado e a porta aberta, vou solicitar a visita de um técnico especializado na sua casa para verificar a qualidade do sinal."
+      },
+      "evaluation": {
+        "clarity": {
+          "score": 4,
+          "justification": "bem organizada; dividir o reinício em três passos ajuda uma cliente leiga, porem caixinha preta ou branca deixa confuso do que se trata"
+        },
+        "customer_fit": {
+          "score": 4,
+          "justification": "tom didático e acolhedor, sem jargão, coerente com o perfil, perde pelo mesmo ponto anterior"
+        },
+        "actionability": {
+          "score": 2,
+          "justification": "não ataca o problema principal de rede, reinicio utiliza 10 segundos ao inves de 30, promete uma visita tecnica que nao sabe se condiz com a empresa"
+        },
+        "average": 3.33,
+        "evaluated_by": "human"
+      }
+    },
+    {
+      "kind": "generation",
+      "run_id": "20261122-165632-cd0ca6",
+      "timestamp": "2026-11-22T16:56:32-03:00",
+      "customer_id": "c01",
+      "customer_profile": {
+        "id": "c01",
+        "name": "Marta Oliveira",
+        "technical_level": "leigo",
+        "communication_style": "didatico",
+        "channel": "telefone",
+        "plan": "FIBRA-300",
+        "notes": "72 anos, usa a internet para videochamadas com a família. Prefere ser guiada passo a passo."
+      },
+      "ticket": {
+        "id": "t02",
+        "text": "O Wi-Fi cai várias vezes por dia, principalmente à noite. No quarto do fundo quase não pega. Na sala, perto do roteador, funciona normal."
+      },
+      "content_type": "resolution_steps",
+      "prompt_version": "v2",
+      "prompt_layers": {
+        "base": true,
+        "domain": true,
+        "tasks": "v1",
+        "role": null
+      },
+      "template_hash": "fb022e8b35cd4b38aa1a5eb1a68453b8630f4e140432274841d679290c4f5096",
+      "provider": "gemini",
+      "model": "gemini-3.5-flash-lite",
+      "config": {
+        "temperature": 0.2,
+        "max_output_tokens": 4096
+      },
+      "cache_key": "df72f22ee291490882263a95f04058c3012a2938d68e9e9007128c70db6764ef",
+      "cached": false,
+      "attempts": 2,
+      "latency_ms": 3536,
+      "output": {
+        "opening": "Olá, dona Marta! Entendi que a internet fica boa na sala, mas some lá no quarto do fundo e cai mais à noite. Vou te ajudar a resolver isso com calma, passo a passo.",
+        "steps": [
+          {
+            "step": 1,
+            "instruction": "Primeiro, dona Marta, me diga se o seu aparelho do Wi-Fi está dentro de algum armário, atrás da televisão ou no chão.",
+            "why": "Aparelhos fechados ou no chão bloqueiam o sinal e fazem a internet não chegar bem nos outros cômodos."
+          },
+          {
+            "step": 2,
+            "instruction": "Quando a senhora estiver longe do roteador, como no quarto do fundo, tente usar a rede de Wi-Fi que tem o número 2.4 no nome.",
+            "why": "Essa rede atravessa melhor as paredes e alcança cômodos mais distantes da sua casa."
+          }
+        ],
+        "closing": "Se mesmo fazendo isso a internet continuar falhando no quarto, me avise para vermos o próximo passo.",
+        "escalation": "Nenhum no momento, pois o problema é de alcance de Wi-Fi e pode ser resolvido com reposicionamento ou troca de rede."
+      },
+      "evaluation": {
+        "clarity": {
+          "score": 5,
+          "justification": "curta e coerente, sem contradições; a recomendação da rede 2.4 para o quarto distante está correta e bem explicada."
+        },
+        "customer_fit": {
+          "score": 5,
+          "justification": "sem jargão; a troca de nomes é leve"
+        },
+        "actionability": {
+          "score": 3,
+          "justification": "condiz com as condutas da empresa porém, so 1 dos passos é uma acao que resolve o problema"
+        },
+        "average": 4.33,
+        "evaluated_by": "human"
+      }
+    },
+    {
+      "kind": "generation",
+      "run_id": "20261122-165636-bf9884",
+      "timestamp": "2026-11-22T16:56:36-03:00",
+      "customer_id": "c01",
+      "customer_profile": {
+        "id": "c01",
+        "name": "Marta Oliveira",
+        "technical_level": "leigo",
+        "communication_style": "didatico",
+        "channel": "telefone",
+        "plan": "FIBRA-300",
+        "notes": "72 anos, usa a internet para videochamadas com a família. Prefere ser guiada passo a passo."
+      },
+      "ticket": {
+        "id": "t02",
+        "text": "O Wi-Fi cai várias vezes por dia, principalmente à noite. No quarto do fundo quase não pega. Na sala, perto do roteador, funciona normal."
+      },
+      "content_type": "resolution_steps",
+      "prompt_version": "v3",
+      "prompt_layers": {
+        "base": true,
+        "domain": true,
+        "tasks": "v3",
+        "role": null
+      },
+      "template_hash": "bcaa722214e43e28b2793fb51bea6107338ec79830378f29202fdd1a135dead7",
+      "provider": "gemini",
+      "model": "gemini-3.5-flash-lite",
+      "config": {
+        "temperature": 0.2,
+        "max_output_tokens": 4096
+      },
+      "cache_key": "ba4437496a4496cfad92c92a2aad5a4724c5a6b7df1c75042579fa2eeac3658f",
+      "cached": false,
+      "attempts": 1,
+      "latency_ms": 6151,
+      "output": {
+        "opening": "Olá, Dona Marta, vamos dar uma olhada nisso juntos com calma para melhorar a sua internet.",
+        "steps": [
+          {
+            "step": 1,
+            "instruction": "Para começarmos, Dona Marta, a senhora poderia verificar se o aparelho do Wi-Fi na sala está em um local alto e aberto, longe de paredes grossas ou armários fechados?",
+            "why": "Quando o aparelho fica escondido ou no chão, o sinal tem mais dificuldade de se espalhar pela casa."
+          },
+          {
+            "step": 2,
+            "instruction": "Quando a senhora estiver usando a internet no quarto do fundo, tente se aproximar um pouco mais da sala ou verifique se há muitas paredes bloqueando o sinal.",
+            "why": "O sinal de Wi-Fi vai perdendo força conforme passa por paredes e cômodos mais distantes."
+          },
+          {
+            "step": 3,
+            "instruction": "Se o problema acontecer à noite, tente usar a rede de Wi-Fi que termina com 2.4 se estiver longe, ou a que termina com 5 se estiver na sala.",
+            "why": "A rede 2.4 GHz atravessa melhor as paredes e alcança cômodos mais distantes da sua casa."
+          }
+        ],
+        "closing": "Me avise como ficou o sinal na sala e no quarto depois dessas dicas, Dona Marta.",
+        "escalation": "Se o problema persistir após orientar o reposicionamento e o uso adequado das redes 2.4 GHz e 5 GHz conforme WIFI-01, o atendente deve oferecer o repetidor mesh NV-MESH1 se compatível ou abrir chamado para N2 Suporte (ESC-04)."
+      },
+      "evaluation": {
+        "clarity": {
+          "score": 4,
+          "justification": "organizado e sem contradicao, porem se engana quando cita \"de noite\" ao inves de distancia"
+        },
+        "customer_fit": {
+          "score": 5,
+          "justification": "sem jargão; a troca de nomes é leve"
+        },
+        "actionability": {
+          "score": 4,
+          "justification": "condiz com as condutas da empresa porém, a primeira sugestao é mais uma dica do que realmente uma instrucao clara do que ser feito"
+        },
+        "average": 4.33,
+        "evaluated_by": "human"
+      }
+    }
+  ]
+}
