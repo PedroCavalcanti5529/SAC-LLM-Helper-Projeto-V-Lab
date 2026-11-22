@@ -10,7 +10,6 @@
 from __future__ import annotations
 
 import json
-import re
 from dataclasses import asdict, dataclass
 from dataclasses import field as dc_field
 from enum import Enum
@@ -229,8 +228,7 @@ class ClarifyingQuestionsOutput(_Output):
 
 FLOW_MAX_DEPTH = 5  # máximo de decisões em qualquer caminho a partir de `start`
 FLOW_MAX_NODES = 15
-PROCEDURE_REF_PREFIX = "PROC-"  # procedimento não é fim de fluxo: folha com PROC-* é inválida
-_EITHER_OR_RE = re.compile(r"\bou\b", re.IGNORECASE)  # "X ou Y?" não é pergunta de sim/não
+# Regras de qualidade (sim/não, procedimento como folha) não ficam aqui: são métricas em metrics.py.
 
 
 class FlowBranch(_Output):
@@ -263,7 +261,7 @@ class FlowNode(_Output):
 
 @dataclass
 class FlowReport:
-    """Métricas e problemas de uma árvore. Usado pela validação e pelo script de comparação."""
+    """Métricas e problemas **estruturais** de uma árvore. Usado pela validação e pelo script de comparação."""
 
     decisions: int = 0
     depth: int = 0
@@ -274,9 +272,7 @@ class FlowReport:
     broken_exits: list[str] = dc_field(default_factory=list)
     unreachable: list[str] = dc_field(default_factory=list)
     cycle: list[str] = dc_field(default_factory=list)
-    invalid_questions: list[str] = dc_field(default_factory=list)
     unknown_refs: list[str] = dc_field(default_factory=list)
-    procedure_refs: list[str] = dc_field(default_factory=list)  # folhas com ref PROC-*: proibido
 
     def problems(self) -> list[str]:
         found = []
@@ -292,24 +288,9 @@ class FlowReport:
             found.append(f"ciclo: {' → '.join(self.cycle)}")
         elif self.depth > FLOW_MAX_DEPTH:
             found.append(f"profundidade {self.depth} excede o máximo de {FLOW_MAX_DEPTH} decisões")
-        if self.invalid_questions:
-            found.append(
-                "perguntas que não são de sim/não (devem terminar com '?' e não ter a forma 'X ou Y?'): "
-                + ", ".join(self.invalid_questions)
-            )
         if self.unknown_refs:
             found.append(f"ref inexistente na base de conhecimento: {', '.join(self.unknown_refs)}")
-        if self.procedure_refs:
-            found.append(
-                "folha com ref de procedimento (PROC-*) não é ação final; o procedimento deve virar "
-                f"uma decisão ('... resolveu?'): {', '.join(self.procedure_refs)}"
-            )
         return found
-
-
-def is_yes_no_question(question: str) -> bool:
-    text = question.strip()
-    return text.endswith("?") and not _EITHER_OR_RE.search(text)
 
 
 def analyze_flow(tree: dict, kb_ids: set[str] | None = None) -> FlowReport:
@@ -327,8 +308,6 @@ def analyze_flow(tree: dict, kb_ids: set[str] | None = None) -> FlowReport:
     report.decisions = len(by_id)
 
     for node_id, node in by_id.items():
-        if not is_yes_no_question(str(node.get("question", ""))):
-            report.invalid_questions.append(node_id)
         for side in ("yes", "no"):
             branch = node.get(side) or {}
             if branch.get("next"):
@@ -338,8 +317,6 @@ def analyze_flow(tree: dict, kb_ids: set[str] | None = None) -> FlowReport:
                 report.leaves += 1
                 if branch.get("ref"):
                     report.leaves_with_ref += 1
-                    if str(branch["ref"]).upper().startswith(PROCEDURE_REF_PREFIX):
-                        report.procedure_refs.append(f"{node_id}.{side} ({branch['ref']})")
                     if kb_ids is not None and branch["ref"] not in kb_ids:
                         report.unknown_refs.append(branch["ref"])
             else:

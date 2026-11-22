@@ -11,6 +11,7 @@ from support_assistant.cli import main
 from support_assistant.flow_render import render_flow, strip_ref
 from support_assistant.generators import OutputValidationError, parse_output
 from support_assistant.llm_client import FAKE_RESPONSES
+from support_assistant.metrics import count_by_rule, flow_violations
 from support_assistant.models import analyze_flow, load_kb_ids
 
 VALID_TREE = {
@@ -82,19 +83,66 @@ def _set(path, value):
     [
         (_set(["nodes", 1, "no"], {"next": "D1"}), "ciclo: D1 → D2 → D1"),
         (_set(["nodes", 1, "no"], {"next": "D9"}), "saídas quebradas"),
-        (_set(["nodes", 1, "question"], "Funciona no cabo ou só no Wi-Fi?"), "não são de sim/não"),
-        (_set(["nodes", 1, "question"], "Funciona bem no cabo de rede"), "não são de sim/não"),
         (_set(["nodes", 0, "yes", "ref"], "ESC-99"), "ref inexistente"),
         (_set(["start"], "D2"), "inalcançáveis"),
         (_set(["start"], "D7"), "'start' não corresponde"),
         (_set(["nodes", 0, "yes"], {"next": "D2", "action": "Encerrar atendimento"}), "exatamente um"),
         (_set(["nodes", 0, "yes"], {"ref": "ESC-01"}), "exatamente um"),
-        (_set(["nodes", 1, "no"], {"action": "Reiniciar ONT e roteador", "ref": "PROC-01"}), r"PROC-\*"),
     ],
 )
-def test_invalid_trees_fail(change, expected, kb_ids):
+def test_structurally_invalid_trees_fail(change, expected, kb_ids):
     with pytest.raises(OutputValidationError, match=expected):
         _parse(_mutate(change), kb_ids)
+
+
+# Regras de qualidade: não rejeitam a árvore (sem retry); viram violações em metrics.py.
+@pytest.mark.parametrize(
+    "change, rule, where",
+    [
+        (_set(["nodes", 1, "question"], "Funciona no cabo ou só no Wi-Fi?"), "question_not_yes_no", "D2"),
+        (_set(["nodes", 1, "question"], "Funciona bem no cabo de rede"), "question_not_yes_no", "D2"),
+        (_set(["nodes", 1, "no"], {"action": "Reiniciar ONT e roteador", "ref": "PROC-01"}), "procedure_leaf", "D2.no"),
+    ],
+)
+def test_quality_rules_are_violations_not_errors(change, rule, where, kb_ids):
+    tree = _mutate(change)
+    assert _parse(tree, kb_ids) == tree  # passa na validação
+    assert analyze_flow(tree, kb_ids).problems() == []
+    violations = flow_violations(tree)
+    assert [(v["rule"], v["where"]) for v in violations] == [(rule, where)]
+    assert count_by_rule(violations)[rule] == 1
+
+
+def test_valid_tree_has_no_violations():
+    assert flow_violations(VALID_TREE) == []
+    counts = count_by_rule([])
+    assert counts["question_not_yes_no"] == 0 and counts["procedure_leaf"] == 0
+
+
+def test_quality_violation_does_not_trigger_retry(generator, customer, ticket):
+    from test_validation import ScriptedClient
+
+    tree = _mutate(_set(["nodes", 1, "no"], {"action": "Reiniciar ONT e roteador", "ref": "PROC-01"}))
+    generator.client = ScriptedClient([json.dumps(tree)])
+    record = generator.generate(customer, ticket, "flow_summary", "v1")
+    assert record["attempts"] == 1 and generator.client.call_count == 1
+    assert [v["rule"] for v in record["metrics"]["violations"]] == ["procedure_leaf"]
+    saved = json.loads((generator.storage.output_dir / "history.json").read_text(encoding="utf-8"))
+    assert saved[-1]["metrics"] == record["metrics"]
+
+
+def test_retry_message_has_no_restructuring_hint(kb_ids, settings):
+    """A dica de reestruturação é engenharia de prompt da v3, não do retry que todas as versões recebem."""
+    from support_assistant.prompt_builder import build_retry_message
+
+    broken = _mutate(_set(["nodes", 1, "no"], {"next": "D1"}))
+    with pytest.raises(OutputValidationError) as exc:
+        _parse(broken, kb_ids)
+    message = build_retry_message(settings.prompts_dir, str(exc.value))
+    for hint in ("resolveu?", "PROC", "sim/não", "X ou Y"):
+        assert hint not in message
+    v3_task = (settings.prompts_dir / "v3" / "flow_summary.md").read_text(encoding="utf-8")
+    assert "resolveu?" in v3_task and "X ou Y?" in v3_task
 
 
 def test_depth_above_five_fails(kb_ids):
@@ -176,3 +224,5 @@ def test_cache_hit_also_has_rendered(generator, fake_client, customer, ticket):
     second = generator.generate(customer, ticket, "flow_summary", "v3")
     assert fake_client.call_count == 1 and second["cached"] is True
     assert second["rendered"] == first["rendered"]
+    assert second["metrics"] == first["metrics"]
+    assert second["metrics"]["violations"] == []
