@@ -2,7 +2,7 @@
 
 Fluxo de `generate`:
   perfil + ticket + tipo + versão
-  -> prompt_builder (base + domínio + tarefa + entrada)
+  -> prompt_builder (camadas declaradas no manifesto da versão + entrada)
   -> cache_key = sha256(campos ordenados)
   -> hit?  sim -> retorna saída do cache (cached=true, nenhuma chamada)
            não -> llm_client -> valida Pydantic -> inválido? retry 1x
@@ -21,17 +21,22 @@ from pydantic import ValidationError
 
 from support_assistant.cache import JsonCache, make_cache_key
 from support_assistant.config import Settings
+from support_assistant.flow_render import render_flow
 from support_assistant.models import (
     OUTPUT_SCHEMAS,
     CustomerProfile,
     InputValidationError,
     Ticket,
+    load_kb_ids,
     validate_content_type,
 )
-from support_assistant.prompt_builder import build_prompt, build_retry_message, validate_version
+from support_assistant.prompt_builder import build_prompt, build_retry_message, list_content_types
 from support_assistant.storage import Storage
 
 logger = logging.getLogger(__name__)
+
+# Tipos cuja saída também é desenhada pelo código. O texto vai no campo `rendered` do registro.
+RENDERERS = {"flow_summary": render_flow}
 
 
 class OutputValidationError(ValueError):
@@ -59,8 +64,11 @@ def _strip_code_fences(raw: str) -> str:
     return text.strip()
 
 
-def parse_output(raw: str, content_type: str) -> dict:
-    """Converte o texto do LLM em dict validado pelo schema do tipo."""
+def parse_output(raw: str, content_type: str, kb_ids: set[str] | None = None) -> dict:
+    """Converte o texto do LLM em dict validado pelo schema do tipo.
+
+    `kb_ids` (ids da base de conhecimento) permite checar as `ref` do flow_summary.
+    """
     try:
         data = json.loads(_strip_code_fences(raw))
     except json.JSONDecodeError as exc:
@@ -68,7 +76,7 @@ def parse_output(raw: str, content_type: str) -> dict:
     if not isinstance(data, dict):
         raise OutputValidationError("A resposta deve ser um objeto JSON (chaves e valores), não uma lista/valor.")
     try:
-        model = OUTPUT_SCHEMAS[content_type].model_validate(data)
+        model = OUTPUT_SCHEMAS[content_type].model_validate(data, context={"kb_ids": kb_ids})
     except ValidationError as exc:
         problems = "; ".join(
             f"{'.'.join(str(p) for p in err['loc']) or '(raiz)'}: {err['msg']}" for err in exc.errors()
@@ -85,6 +93,7 @@ class Generator:
         self.client = client
         self.cache = cache
         self.storage = storage
+        self.kb_ids = load_kb_ids(settings.domain_path)  # para validar as `ref` do flow_summary
 
     def generate(
         self,
@@ -121,6 +130,7 @@ class Generator:
             "ticket": ticket.to_dict(),
             "content_type": content_type,
             "prompt_version": version,
+            "prompt_layers": prompt.layers,
             "template_hash": prompt.template_hash,
             "provider": self.client.provider,
             "model": self.client.model,
@@ -150,6 +160,9 @@ class Generator:
                 {"output": output, "run_id": record["run_id"], "created_at": record["timestamp"]},
             )
 
+        if content_type in RENDERERS:  # texto desenhado pelo código, separado da árvore em `output`
+            record["rendered"] = RENDERERS[content_type](record["output"])
+
         if persist:
             record["run_path"] = str(self.storage.save_run(record))
         return record
@@ -157,13 +170,13 @@ class Generator:
     def _call_with_retry(self, system: str, user: str, content_type: str, record: dict) -> tuple[dict, int]:
         raw = self.client.complete(system, user, content_type)
         try:
-            return parse_output(raw, content_type), 1
+            return parse_output(raw, content_type, self.kb_ids), 1
         except OutputValidationError as first_error:
             logger.warning("Resposta inválida na 1ª tentativa: %s", first_error)
             retry_user = user + "\n\n" + build_retry_message(self.settings.prompts_dir, str(first_error))
             raw_retry = self.client.complete(system, retry_user, content_type)
             try:
-                return parse_output(raw_retry, content_type), 2
+                return parse_output(raw_retry, content_type, self.kb_ids), 2
             except OutputValidationError as second_error:
                 self.storage.log_failure(
                     {
@@ -189,14 +202,19 @@ class Generator:
         content_type: str,
         versions: list[str],
     ) -> list[dict]:
-        """Gera a mesma entrada em ≥2 versões. Só a versão varia (provider/model/config são os mesmos)."""
+        """Gera a mesma entrada em ≥2 versões. Só a versão varia (perfil/ticket/provider/model/config fixos)."""
         if len(versions) < 2:
             raise InputValidationError("A comparação precisa de pelo menos 2 versões de prompt.")
         if len(set(versions)) != len(versions):
             raise InputValidationError("As versões comparadas devem ser diferentes entre si.")
         validate_content_type(content_type)
-        for version in versions:  # valida tudo antes de gastar chamadas
-            validate_version(self.settings.prompts_dir, version)
+        for version in versions:  # valida tudo (versão, manifesto, template do tipo) antes de gastar chamadas
+            available = list_content_types(self.settings.prompts_dir, version)
+            if content_type not in available:
+                raise InputValidationError(
+                    f"A versão {version!r} não tem template para {content_type!r}. "
+                    f"Disponíveis: {', '.join(available)}."
+                )
         return [self.generate(customer, ticket, content_type, v, persist=False) for v in versions]
 
     def save_comparison(self, runs: list[dict], winner: str | None) -> tuple[dict, str]:
