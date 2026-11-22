@@ -109,30 +109,25 @@ Por que essa ordem (contexto antes da tarefa): a tarefa estruturada da v3 cita I
 
 ## 5. Comparação registrada (rubrica manual)
 
-> **Status: PENDENTE de execução com modelo real.** A rubrica é preenchida por uma pessoa
-> (RN08/RN09). O comando abaixo gera as três saídas e pede as notas interativamente. O JSON
-> resultante vai para `outputs/runs/cmp-*.json`. Copie-o para `samples/gemini_compare_*.json` e
-> preencha a tabela.
+> **Cenário escolhido**: **c01** (leiga, didática, telefone) + **t02** (Wi-Fi cai à noite no quarto).
+É o perfil mais exigente em adaptação (sem jargão, explicar o porquê, sem links) e o ticket tem
+informação suficiente para passos concretos.
 
 ```bash
 # .env com LLM_PROVIDER=gemini e GEMINI_API_KEY preenchida
 support-assistant compare -c c01 -t t02 -y resolution_steps --versions v1 v2 v3
 ```
 
-Cenário escolhido: **c01** (leiga, didática, telefone) + **t02** (Wi-Fi cai à noite no quarto).
-É o perfil mais exigente em adaptação (sem jargão, explicar o porquê, sem links) e o ticket tem
-informação suficiente para passos concretos.
-
 | Critério | v1 nota | v1 justificativa | v2 nota | v2 justificativa | v3 nota | v3 justificativa |
 |---|---|---|---|---|---|---|
-| clarity | _ | _ | _ | _ | _ | _ |
-| customer_fit | _ | _ | _ | _ | _ | _ |
-| actionability | _ | _ | _ | _ | _ | _ |
-| **média** | _ | | _ | | _ | |
+| clarity | 4 | bem organizada; dividir o reinício em três passos ajuda uma cliente leiga, porem caixinha preta ou branca deixa confuso do que se trata | 5 | curta e coerente, sem contradições; a recomendação da rede 2.4 para o quarto distante está correta e bem explicada. | 4 | organizado e sem contradicao, porem se engana quando cita \"de noite\" ao inves de distancia |
+| customer_fit | 4 | tom didático e acolhedor, sem jargão, coerente com o perfil, perde pelo mesmo ponto anterior | 5 | sem jargão; a troca de nomes é leve | 5 | sem jargão; a troca de nomes é leve |
+| actionability | 2 | não ataca o problema principal de rede, reinicio utiliza 10 segundos ao inves de 30, promete uma visita tecnica que nao sabe se condiz com a empresa | 3 | condiz com as condutas da empresa porém, so 1 dos passos é uma acao que resolve o problema | 4 | condiz com as condutas da empresa porém, a primeira sugestao é mais uma dica do que realmente uma instrucao clara do que ser feito |
+| **média** | 3.33 | | 4.33 | | 4.33 | |
 
 Leitura: Δ(v2 − v1) = efeito do contexto; Δ(v3 − v2) = efeito da tarefa estruturada.
 
-Provedor/modelo/config: `gemini` / `gemini-2.5-flash` / `temperature=0.2, max_output_tokens=4096`.
+Provedor/modelo/config: `gemini` / `gemini-3.5-flash-lite` / `temperature=0.2, max_output_tokens=4096`.
 Hash dos templates: ver `template_hash` (e `prompt_layers`) de cada run no JSON.
 
 **Regra de versionamento (RN05):** depois que esta comparação for registrada, `prompts/v1/`,
@@ -163,12 +158,18 @@ tarefas da v1, editar `prompts/v1/*.md` altera **as duas** versões.
   árvore (`title`, `start`, `nodes[{id, question, yes, no}]`, cada saída `{"next"}` ou
   `{"action", "ref"}`) e `flow_render.py` desenha o texto de forma determinística. Diagrama e
   decisões vêm da mesma fonte, então não podem divergir.
-- **Validação da árvore como regra de schema** (`analyze_flow` em `models.py`): todo `next`
-  existe, todo nó é alcançável a partir de `start`, sem ciclos, profundidade ≤ 5, toda folha é
-  ação, `ref` existe na base e não é procedimento (`PROC-*`), pergunta termina com "?" e não tem a
-  forma "X ou Y?". Falhou →
-  retry 1x com a lista exata de problemas. O script `scripts/compare_flow_summary.py` usa a mesma
-  função para as métricas, então CLI e script concordam sobre o que é uma árvore quebrada.
+- **Árvore: regras estruturais validam, regras de qualidade medem.**
+  - *Estruturais* (`analyze_flow` em `models.py`, validação dura com retry 1x): `start` existe, ids
+    únicos, todo `next` existe, todo nó alcançável, sem ciclos, profundidade ≤ 5, toda saída é
+    `next` ou ação, `ref` existe na base. Sem elas a árvore não pode ser desenhada nem citada.
+  - *Qualidade* (`flow_violations` em `metrics.py`, nunca rejeita): pergunta de sim/não (termina
+    com "?" e não é "X ou Y?") e folha que termina num procedimento (`PROC-*`). Vão para o
+    campo `violations` do registro e aparecem como avisos na CLI.
+  - Por quê: (1) as duas são heurísticas com falso positivo ("um ou mais aparelhos?") e custavam
+    uma chamada de retry; (2) a mensagem de erro dessas regras carregava a dica de reestruturação
+    ("o procedimento deve virar uma decisão '... resolveu?'") para **todas** as versões via retry.
+    Isso vazava engenharia de prompt da v3 para v1 e v2 e contaminava a ablação. Agora a dica está
+    só no prompt da v3 e a qualidade é medida igual nas três.
 - **Árvore em `output`, texto em `rendered`.** O registro guarda os dois; o texto é recalculado
   também em cache hit, porque depende só da árvore.
 - **Campos extras ignorados** (`extra="ignore"`), campos obrigatórios exigidos. É uma tolerância
@@ -199,9 +200,13 @@ tarefas da v1, editar `prompts/v1/*.md` altera **as duas** versões.
 - **v1 sem base não tem limites nem proteção por instrução contra injeção.** É proposital (é o
   baseline), mas significa que a v1 não deve ser usada em atendimento real.
 - **O fake não testa qualidade de prompt**, só o pipeline (montagem, cache, validação, persistência).
-- **A checagem "X ou Y?" é uma heurística**: rejeita qualquer pergunta com a palavra "ou". Pode
-  rejeitar perguntas legítimas de sim/não ("Acontece em um ou mais aparelhos?"); o retry costuma
-  corrigir, mas custa uma chamada.
+- **A checagem "X ou Y?" é uma heurística**: marca qualquer pergunta com a palavra "ou", inclusive
+  perguntas legítimas de sim/não ("Acontece em um ou mais aparelhos?"). Por isso é uma violação
+  medida (`metrics.py`), não um erro: não gasta retry, mas o número de violações pode superestimar
+  o problema e deve ser lido junto da árvore.
+- **Regras de qualidade do `flow_summary` não são garantidas.** Uma árvore com pergunta "X ou Y?"
+  ou folha `PROC-*` é aceita, gravada e cacheada; só aparece como aviso. A v1/v2 tendem a ter mais
+  violações porque não recebem a dica de reestruturação (é o que a ablação deve mostrar).
 - **O schema de saída não entra na chave de cache.** Mudanças de schema só invalidam o cache
   porque também mudam o template da tarefa (e portanto o `template_hash`).
 - **Proteção contra prompt injection é básica** (tags + instrução + sanitização de fechamento de tag).
@@ -253,3 +258,19 @@ tarefas da v1, editar `prompts/v1/*.md` altera **as duas** versões.
     no texto da ação, e procedimento não é folha.
   - O prompt da v1 (e portanto da v2) não mudou: as correções de validação e renderização valem
     para as três versões por serem de formato; as regras novas são só da v3.
+  - Correção na tarefa de passos: informação faltante vira um passo condicional 
+    ("Se o aparelho estiver no chão, coloque-o num lugar alto"), nunca uma pergunta.
+  - Correção no domínio: acrescente à WIFI-01 que, em cômodo distante, a preferência é a rede 2.4 GHz. 
+    Como a correção está no domínio, vale igualmente para v2 e v3 e não desequilibra a comparação.
+- **2026-11-22 — regras de qualidade do `flow_summary` saem da validação.**
+  - **Validação (todas as versões):** "pergunta de sim/não" e "folha `PROC-*`" deixam de rejeitar a
+    árvore e de disparar retry; viram violações em `metrics.py` (campo `violations`). Continuam
+    como validação dura só as regras estruturais. Efeito: a mensagem de retry, que todas as versões
+    recebem, não carrega mais a dica de reestruturação.
+  - **Prompt da v3 (engenharia de prompt):** a dica foi para `prompts/v3/flow_summary.md` com
+    exemplos: alternativa "X ou Y?" vira pergunta sobre uma delas ("Funciona no cabo de rede?");
+    folha de procedimento vira o nó "Reiniciar a ONT e o roteador resolveu?" (sim → encerrar,
+    não → próxima verificação). Muda o `template_hash` da v3 **só** para `flow_summary`; a
+    comparação Gemini registrada (`resolution_steps`) não é afetada.
+  - v1 e v2 não mudaram de prompt. Execuções antigas de `flow_summary` que foram rejeitadas por
+    essas regras hoje seriam aceitas com avisos.

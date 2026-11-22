@@ -1,5 +1,7 @@
 # support-prompt-assistant
 
+[![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/ci.yml)
+
 CLI em Python que gera **conteúdo de suporte técnico adaptado ao perfil do cliente** para um
 provedor de internet fictício (NetVale Fibra), usando um LLM com **prompts versionados**,
 **cache**, **histórico em JSON** e **comparação entre versões de prompt com rubrica manual**.
@@ -70,10 +72,12 @@ está vazio). Ele devolve respostas fixas, marcadas com `[FAKE]`, e serve para t
 |---|---|---|
 | `LLM_PROVIDER` | `fake` | `fake` (offline) ou `gemini` |
 | `GEMINI_API_KEY` | — | obrigatória se `LLM_PROVIDER=gemini` |
-| `LLM_MODEL` | `gemini-2.5-flash` | modelo do Gemini |
+| `LLM_MODEL` | `gemini-3.5-flash-lite` | modelo do Gemini |
 | `LLM_TEMPERATURE` | `0.2` | 0 a 2 |
 | `LLM_MAX_OUTPUT_TOKENS` | `4096` | limite de tokens da resposta |
 | `LLM_TIMEOUT_SECONDS` | `60` | timeout da requisição |
+| `LLM_MAX_RETRIES` | `3` | repetições em falha temporária do provedor (0 a 10; `0` desliga) |
+| `LLM_BACKOFF_BASE_SECONDS` | `2` | base do backoff exponencial, em segundos (0 a 60) |
 | `OUTPUT_DIR` | `outputs/` | onde ficam `history.json`, `cache.json`, `runs/` |
 
 Variáveis já definidas no ambiente têm prioridade sobre o `.env`.
@@ -254,11 +258,15 @@ Todos em [src/support_assistant/](src/support_assistant/).
   | `clarifying_questions` | `already_known[]`, `questions[{priority, question, purpose}]` | 0–5 perguntas, reordenadas por prioridade |
   | `flow_summary` | `title`, `start`, `nodes[{id, question, yes, no}]`; cada `yes`/`no` é `{"next": id}` ou `{"action", "ref"}` | 1–15 nós; árvore validada por `analyze_flow()` (abaixo) |
 
-  A árvore do `flow_summary` passa por `analyze_flow()`: todo `next` aponta para um nó existente,
+  A árvore do `flow_summary` passa por `analyze_flow()` (só regras estruturais): todo `next` aponta para um nó existente,
   todo nó é alcançável a partir de `start`, sem ciclos, profundidade ≤ 5 decisões, toda folha é
-  uma ação, `ref` existe na base de conhecimento (`load_kb_ids()`) e não é procedimento (`PROC-*`:
-  procedimento vira decisão "… resolveu?", não fim de fluxo), e cada `question` termina com
-  "?" e não tem a forma "X ou Y?". Problemas viram erro de schema → retry 1x com a lista exata.
+  uma ação e `ref` existe na base de conhecimento (`load_kb_ids()`). Problemas viram erro de
+  schema → retry 1x com a lista exata.
+
+  As regras de **qualidade** ficam em [metrics.py](src/support_assistant/metrics.py) e não
+  rejeitam a árvore: `question_not_yes_no` (pergunta sem "?" ou na forma "X ou Y?") e
+  `procedure_leaf` (folha com `ref` `PROC-*`). Vão para o campo `violations` do registro e a CLI as
+  mostra como "Avisos de qualidade". A dica de como reestruturar está só no prompt da v3.
 
   Strings obrigatórias não podem ser vazias. Campos extras são ignorados.
 
@@ -312,6 +320,15 @@ Todos em [src/support_assistant/](src/support_assistant/).
   - 401/403 → chave inválida, "confira o `.env`"
   - 404 → modelo inexistente, "ajuste `LLM_MODEL`"
   - 5xx, timeout, sem conexão, resposta vazia ou bloqueada → `LLMProviderError`
+- **Retry do provedor** (separado do retry por schema): só 429, 5xx, timeout e erro de conexão são
+  repetidos, até `LLM_MAX_RETRIES` vezes, com espera `base × 2^n + jitter(0..base)`. Se a resposta
+  traz `Retry-After`, espera exatamente esse tempo; acima de 60 s (ex.: cota diária) desiste na hora.
+  400/401/403/404 nunca são repetidos. Esgotadas as tentativas, a mensagem amigável acima é mostrada e
+  nada vai para cache nem histórico. Cada repetição gera um aviso `[WARNING] support_assistant.llm_client: …`.
+  O registro grava `provider_retries` (repetições do provedor), separado de `attempts` (tentativas
+  por schema); nenhum dos dois entra na chave de cache.
+- Transporte HTTP e função de espera são injetáveis (`transport=`, `sleep=`), para os testes
+  simularem falhas sem rede e sem esperar.
 - **`create_client(settings)`** escolhe o provedor. Sem chave, a mensagem aponta para o `.env`.
 
 ### [generators.py](src/support_assistant/generators.py): orquestração
@@ -492,11 +509,12 @@ Arquivos em `OUTPUT_DIR` (padrão `outputs/`, ignorado pelo git):
   "prompt_layers": { "base": true, "domain": true, "tasks": "v3", "role": null },
   "template_hash": "3f9a...",
   "provider": "gemini",
-  "model": "gemini-2.5-flash",
+  "model": "gemini-3.5-flash-lite",
   "config": { "temperature": 0.2, "max_output_tokens": 4096 },
   "cache_key": "a1b2...",
   "cached": false,
   "attempts": 1,
+  "provider_retries": 0,
   "latency_ms": 2140,
   "output": { "opening": "...", "steps": [ ... ], "closing": "...", "escalation": "..." },
   "evaluation": null,
@@ -513,7 +531,7 @@ Arquivos em `OUTPUT_DIR` (padrão `outputs/`, ignorado pelo git):
   "customer_id": "c02",
   "ticket": { "...": "..." },
   "content_type": "resolution_steps",
-  "provider": "gemini", "model": "gemini-2.5-flash", "config": { "...": "..." },
+  "provider": "gemini", "model": "gemini-3.5-flash-lite", "config": { "...": "..." },
   "versions": ["v1", "v2", "v3"],
   "winner": "v3",
   "runs": [
@@ -624,7 +642,10 @@ Resumo; a lista completa está em [PROMPT_ENGINEERING_NOTES.md](PROMPT_ENGINEERI
 
 - Um único provedor real (Gemini). Outro provedor exige uma nova classe em `llm_client.py`.
 - O provedor fake valida o pipeline, não a qualidade dos prompts.
-- A adaptação ao perfil é avaliada pela rubrica humana; não há verificação automática de jargão.
+- A verificação automática de adaptação ao perfil é heurística e parcial: `metrics.py` aponta
+  jargão para cliente leigo e URL/IP/comando no canal telefone **só em `resolution_steps`**, por
+  lista fixa de termos e expressões regulares (pode haver falso positivo e negativo). Estilo e tom
+  continuam dependendo da rubrica humana.
 - Histórico e cache em JSON reescritos a cada gravação: adequado para uso local, não para concorrência.
 - A base de conhecimento é estática e fictícia; não há integração com sistemas reais (status, cadastro).
 - Proteção contra prompt injection é básica (delimitação + instrução + sanitização das tags).
