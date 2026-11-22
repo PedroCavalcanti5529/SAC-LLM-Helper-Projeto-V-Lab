@@ -11,7 +11,7 @@ Dado um perfil de cliente (nível técnico, estilo, canal) e um ticket, gera um 
 | `diagnosis` | atendente | hipóteses, evidências, informações faltantes, conclusão provável |
 | `resolution_steps` | cliente | passos adaptados ao nível, ao estilo e ao canal |
 | `clarifying_questions` | cliente | perguntas priorizadas, só as necessárias |
-| `flow_summary` | atendente | fluxo de decisão em ASCII + pontos de decisão estruturados |
+| `flow_summary` | atendente | árvore de decisão estruturada (sim/não), desenhada em texto pelo código |
 
 ---
 
@@ -102,22 +102,27 @@ Tickets (--ticket-id):
   t03    [tecnico ] Desde ontem à noite tenho latência alta (80-150 ms, normalmente 8 m...
   t04    [comum   ] A internet ficou fora o dia todo, a luz vermelha da caixinha da fib...
 
-Versões de prompt (--version / --versions):
-  v1     tipos: diagnosis, resolution_steps, clarifying_questions, flow_summary
-  v2     tipos: diagnosis, resolution_steps, clarifying_questions, flow_summary
+Versões de prompt (--version / --versions), cada uma acrescenta uma camada à anterior:
+  v1     camadas: papel mínimo + tarefas v1
+         tipos: diagnosis, resolution_steps, clarifying_questions, flow_summary
+         Baseline mínimo: papel de uma linha + tarefa simples. Sem camada base e sem domínio.
+  v2     camadas: base + domínio + tarefas v1
+         ...
+  v3     camadas: base + domínio + tarefas v3
+         ...
 ```
 
 ### `generate`: gerar um conteúdo
 
 ```bash
 # ticket do catálogo
-support_assistant generate --customer c01 --ticket-id t02 --type resolution_steps --version v2
+support_assistant generate --customer c01 --ticket-id t02 --type resolution_steps --version v3
 
 # ticket em texto livre (forma curta dos argumentos)
 support_assistant generate -c c03 --ticket "ping alto desde ontem à noite" -y diagnosis -p v1
 
-# só ver o prompt montado (4 camadas), sem chamar o LLM nem gravar nada
-support_assistant generate -c c04 -t t01 -y clarifying_questions --show-prompt
+# só ver o prompt montado (camadas da versão), sem chamar o LLM nem gravar nada
+support_assistant generate -c c04 -t t01 -y clarifying_questions -p v1 --show-prompt
 ```
 
 | Argumento | Obrigatório | Descrição |
@@ -125,13 +130,14 @@ support_assistant generate -c c04 -t t01 -y clarifying_questions --show-prompt
 | `--customer`, `-c` | sim | id do perfil |
 | `--ticket-id`, `-t` / `--ticket` | um dos dois | id do catálogo **ou** texto livre |
 | `--type`, `-y` | sim | `diagnosis`, `resolution_steps`, `clarifying_questions`, `flow_summary` |
-| `--version`, `-p` | não (`v2`) | versão do prompt |
+| `--version`, `-p` | não (`v3`) | versão do prompt: `v1`, `v2` ou `v3` (ver [seção 5](#5-prompts)) |
 | `--show-prompt` | não | imprime o prompt e sai |
 
 Saída (com o provedor fake):
 ```
 ────────────────────────────────────────────────────────────────────────
-resolution_steps | versão v2 | cliente c01 | fake/fake-model-v1
+resolution_steps | versão v3 | cliente c01 | fake/fake-model-v1
+camadas: base + domínio + tarefas v3
 cache: não | tentativas: 1 | latência: 0 ms
 ────────────────────────────────────────────────────────────────────────
 [FAKE] Olá! Vamos resolver isso juntos.
@@ -151,11 +157,15 @@ Se você rodar o mesmo comando de novo, aparece `cache: sim (nenhuma chamada à 
 ### `compare`: comparar versões de prompt
 
 ```bash
-support_assistant compare -c c01 -t t02 -y resolution_steps --versions v1 v2
+# ablação completa (padrão quando --versions é omitido)
+support_assistant compare -c c01 -t t02 -y resolution_steps --versions v1 v2 v3
+
+# só um par de versões vizinhas (ex.: efeito da tarefa estruturada)
+support_assistant compare -c c01 -t t02 -y resolution_steps --versions v2 v3
 ```
 
-1. Gera a mesma entrada em cada versão. Perfil, ticket, provedor, modelo e config são os mesmos;
-   só a versão do prompt muda.
+1. Gera a mesma entrada em cada versão (**2 ou mais**, todas diferentes; padrão `v1 v2 v3`).
+   Perfil, ticket, provedor, modelo e config são os mesmos; só a versão do prompt muda.
 2. Mostra as saídas.
 3. **Pede, interativamente, as notas de 1 a 5 e uma justificativa** para `clarity`,
    `customer_fit` e `actionability` de cada versão. Nota inválida ou justificativa vazia é
@@ -177,7 +187,8 @@ perfil + ticket + tipo + versão
  validação de entrada (models.py)  ── inválido ──► erro claro com opções válidas (sem chamar LLM)
         │
         ▼
- prompt_builder: base + domínio + tarefa(versão) + entrada  ──► template_hash
+ prompt_builder: lê prompts/<versão>/manifest.json
+                 camadas declaradas (base|papel mínimo, domínio, tarefa) + entrada  ──► template_hash
         │
         ▼
  cache_key = sha256(perfil, ticket, tipo, versão, template_hash, provider, model, config)
@@ -241,22 +252,54 @@ Todos em [src/support_assistant/](src/support_assistant/).
   | `diagnosis` | `hypotheses[{cause, likelihood, rationale}]`, `evidence[]`, `missing_info[]`, `probable_conclusion` | 1–5 hipóteses; `likelihood` ∈ `alta/media/baixa`; ≥1 evidência |
   | `resolution_steps` | `opening`, `steps[{step, instruction, why}]`, `closing`, `escalation` | 1–10 passos, reordenados por `step`; `why` opcional |
   | `clarifying_questions` | `already_known[]`, `questions[{priority, question, purpose}]` | 0–5 perguntas, reordenadas por prioridade |
-  | `flow_summary` | `title`, `ascii_diagram`, `decision_points[{id, check, if_yes, if_no}]` | 1–10 pontos; ASCII opcional |
+  | `flow_summary` | `title`, `start`, `nodes[{id, question, yes, no}]`; cada `yes`/`no` é `{"next": id}` ou `{"action", "ref"}` | 1–15 nós; árvore validada por `analyze_flow()` (abaixo) |
+
+  A árvore do `flow_summary` passa por `analyze_flow()`: todo `next` aponta para um nó existente,
+  todo nó é alcançável a partir de `start`, sem ciclos, profundidade ≤ 5 decisões, toda folha é
+  uma ação, `ref` existe na base de conhecimento (`load_kb_ids()`) e não é procedimento (`PROC-*`:
+  procedimento vira decisão "… resolveu?", não fim de fluxo), e cada `question` termina com
+  "?" e não tem a forma "X ou Y?". Problemas viram erro de schema → retry 1x com a lista exata.
 
   Strings obrigatórias não podem ser vazias. Campos extras são ignorados.
 
 ### [prompt_builder.py](src/support_assistant/prompt_builder.py): montagem do prompt
-- `build_prompt(...)` lê os templates e monta:
-  - **system** = `base/system.md` + `base/domain.md` (com o JSON do domínio) + `<versão>/<tipo>.md`
-  - **user** = `base/input.md` com perfil (JSON) e ticket delimitados por tags
+- `load_manifest()` lê e valida `prompts/<versão>/manifest.json` (camadas `base`/`domain` como
+  booleanos, pasta `tasks` existente, `role` obrigatório só quando não há base). Erros apontam o
+  arquivo e o campo.
+- `build_prompt(...)` monta o prompt **só a partir do manifesto** (nenhuma versão está no código):
+  - **system** = (`base/system.md` **ou** o arquivo `role`) + (`base/domain.md` com o JSON do
+    domínio, se `domain: true`) + `<tasks>/<tipo>.md`
+  - **user** = `base/input.md` com perfil (JSON) e ticket delimitados por tags (igual em todas as versões)
+  - devolve também `layers`, gravado no histórico como `prompt_layers`
 - Usa `string.Template` (`$variavel`) em vez de `str.format`, para que as chaves `{}` dos exemplos
   JSON nos prompts não precisem de escape.
-- `template_hash`: SHA-256 de **todos** os templates usados (base, domínio, tarefa, entrada, retry).
-  Qualquer edição muda o hash, invalida o cache e fica registrada no histórico (RN05).
+- `template_hash`: SHA-256 de pares (rótulo, texto) de **tudo** o que entra no prompt final (papel
+  ou base, domínio, tarefa, entrada, retry). Editar um arquivo ou mudar a composição no manifesto
+  muda o hash, invalida o cache e fica registrado no histórico (RN05).
 - Sanitiza o ticket para que o texto do cliente não feche as tags `</ticket>` (proteção simples
   contra prompt injection).
-- `list_versions()` descobre as versões pelas pastas de `prompts/` (exceto `base`).
+- `list_versions()` descobre as versões pelas pastas de `prompts/` que têm `manifest.json`.
   `build_retry_message()` monta a mensagem de correção a partir de `base/retry.md`.
+
+### [flow_render.py](src/support_assistant/flow_render.py): desenho do `flow_summary`
+- `render_flow(tree)` desenha a árvore validada como texto, de cima para baixo, uma pergunta por
+  nó; folhas como "Ação (REF). FIM". É determinístico: a mesma árvore gera sempre o mesmo texto,
+  e a ordem dos nós na lista não importa (parte de `start`).
+- O modelo nunca desenha o diagrama; por isso diagrama e decisões não podem se contradizer.
+- `strip_ref()` remove do texto da ação o id que já está em `ref` (ex.: "Agendar visita (ESC-01)",
+  "… conforme ESC-01"), para o id aparecer uma vez só, em "(REF)".
+
+```
+[FAKE] Triagem de internet instável
+
+[D1] [FAKE] A luz LOS da ONT está vermelha?
+├─ SIM → Agendar visita técnica (ESC-01). FIM
+└─ NÃO → [D2] [FAKE] Reiniciar ONT e roteador resolveu?
+   ├─ SIM → Encerrar atendimento. FIM
+   └─ NÃO → [D3] [FAKE] O problema também acontece no cabo de rede?
+      ├─ SIM → Escalar para N2 Rede com as evidências coletadas (ESC-02). FIM
+      └─ NÃO → Orientar ajustes do Wi-Fi (WIFI-01). FIM
+```
 
 ### [llm_client.py](src/support_assistant/llm_client.py): provedores de LLM
 - Interface única: `.provider`, `.model`, `.complete(system, user, content_type) -> str`.
@@ -281,7 +324,9 @@ Todos em [src/support_assistant/](src/support_assistant/).
   novo, grava as duas respostas brutas em `failures.json` e lança `GenerationError`, que a CLI
   mostra sem stack trace.
 - Falha do provedor ou JSON inválido **nunca** entram no cache nem no histórico.
-- **`Generator.compare()`** valida todas as versões antes de gastar chamadas, gera cada uma com o
+- Para `flow_summary`, grava a árvore em `output` e o texto de `render_flow()` no campo separado
+  `rendered` (também em cache hit). Os outros tipos não têm `rendered`.
+- **`Generator.compare()`** valida todas as versões (manifesto e template do tipo) antes de gastar chamadas, gera cada uma com o
   mesmo cliente/config e não persiste nada até a avaliação. **`save_comparison()`** grava o registro final.
 
 ### [cache.py](src/support_assistant/cache.py): cache
@@ -308,6 +353,8 @@ Todos em [src/support_assistant/](src/support_assistant/).
 - `argparse` com os subcomandos `list`, `generate` e `compare`.
 - Resolve perfil e ticket por id (ou texto livre). Ids inexistentes geram erro com as opções válidas.
 - `render_output()` formata cada tipo de forma legível no terminal. O JSON completo fica no arquivo.
+  O cabeçalho de cada saída mostra as camadas usadas pela versão. Para `flow_summary`, exibe o
+  texto de `rendered`.
 - `collect_rubric()` faz as perguntas da rubrica e repete a pergunta quando a entrada é inválida.
 - `main()` captura os erros conhecidos e imprime `Erro: <mensagem>` com exit code 1, sem stack
   trace. `Ctrl+C` sai com 130. `--verbose` liga logs de depuração.
@@ -319,34 +366,57 @@ Permite `python -m support_assistant ...`.
 
 ## 5. Prompts
 
-O prompt tem **4 camadas**. Numa comparação, só a camada 3 varia.
+O prompt tem **4 camadas**. Cada versão declara no seu `manifest.json` quais usa.
 
 | # | Camada | Arquivo | Conteúdo |
 |---|---|---|---|
 | 1 | Base | [prompts/base/system.md](prompts/base/system.md) | persona (assistente do atendente N1), público de cada tipo, 7 limites obrigatórios, regras de adaptação (nível/estilo/canal) com precedência, formato JSON, proibição de chain-of-thought |
 | 2 | Domínio | [prompts/base/domain.md](prompts/base/domain.md) + [data/domains/wifi_isp.json](data/domains/wifi_isp.json) | fatos da empresa com IDs citáveis |
-| 3 | Tarefa | `prompts/v1/*.md`, `prompts/v2/*.md` | instrução e formato de cada tipo |
-| 4 | Entrada | [prompts/base/input.md](prompts/base/input.md) | `<perfil_cliente>` + `<ticket>` |
-| — | Retry | [prompts/base/retry.md](prompts/base/retry.md) | mensagem de correção com o erro do validador |
+| 3 | Tarefa | `prompts/v1/*.md` (simples), `prompts/v3/*.md` (estruturada) | instrução e formato de cada tipo |
+| 4 | Entrada | [prompts/base/input.md](prompts/base/input.md) | `<perfil_cliente>` + `<ticket>` (todas as versões) |
+| — | Retry | [prompts/base/retry.md](prompts/base/retry.md) | mensagem de correção com o erro do validador (todas as versões) |
 
 Nenhum prompt está escrito no código Python: todos ficam em arquivos `.md`.
 
-### Versões
-- **[v1](prompts/v1/)**: *baseline*. Uma frase de tarefa + o formato JSON esperado.
-- **[v2](prompts/v2/)**: estruturado. Objetivo e público, critérios por campo, regras para casos
-  limite (ticket vago, cliente que já testou, critério de escalonamento), limites de quantidade
-  por estilo, ordem de prioridade, schema com tipos e um checklist de verificação que o modelo
-  não escreve na saída.
+### Versões (ablação: cada uma acrescenta uma camada)
 
-Estratégias, comparação v1×v2, decisões e limitações estão em
+| Versão | Base | Domínio | Tarefas | Mede, em relação à anterior |
+|---|---|---|---|---|
+| **[v1](prompts/v1/manifest.json)** | não ([papel de uma linha](prompts/v1/role.md)) | não | `v1/` simples | — (baseline) |
+| **[v2](prompts/v2/manifest.json)** | sim | sim | `v1/` simples (reutilizadas, sem cópia) | o **contexto** |
+| **[v3](prompts/v3/manifest.json)** | sim | sim | `v3/` estruturadas | a **tarefa** |
+
+- **v1**: "assistente de suporte técnico" + "responda apenas com JSON válido, em pt-BR" + uma frase
+  de tarefa com o formato JSON. Perfil e ticket entram delimitados, como em todas as versões.
+- **v2**: a mesma tarefa da v1 com persona, limites, regras de perfil, formato e base de conhecimento.
+- **v3**: estruturada. Objetivo e público, critérios por campo, regras para casos limite (ticket
+  vago, cliente que já testou, critério de escalonamento), limites de quantidade por estilo, ordem
+  de prioridade, schema com tipos e um checklist de verificação que o modelo não escreve na saída.
+
+O schema de saída de cada tipo é o mesmo nas três versões.
+
+Exemplo de manifesto ([prompts/v2/manifest.json](prompts/v2/manifest.json)):
+```json
+{
+  "description": "Camada base + domínio com a MESMA tarefa simples da v1 ...",
+  "layers": { "base": true, "domain": true, "tasks": "v1" },
+  "hypothesis": "Persona, limites, regras de adaptação e base de conhecimento melhoram customer_fit ...",
+  "changelog": ["2026-11-22: criada como base + domínio + tarefas da v1 ..."]
+}
+```
+Sem base (`"base": false`), o manifesto precisa de `"role": "<arquivo em prompts/>"`.
+
+Estratégias, ablação v1→v2→v3, decisões e limitações estão em
 **[PROMPT_ENGINEERING_NOTES.md](PROMPT_ENGINEERING_NOTES.md)**.
 
 ### Criar uma nova versão
-1. Copie `prompts/v2/` para `prompts/v3/` e edite só os arquivos de tarefa.
-2. Ela aparece automaticamente em `list` e pode ser usada com `--version v3`.
-3. Registre a mudança em `PROMPT_ENGINEERING_NOTES.md`.
+1. Crie `prompts/v4/manifest.json` declarando as camadas. Se a tarefa mudar, coloque os novos
+   arquivos de tarefa em `prompts/v4/` e use `"tasks": "v4"`; senão, aponte para uma pasta existente.
+2. Ela aparece automaticamente em `list` e pode ser usada com `--version v4`.
+3. Registre a mudança no changelog do manifesto e em `PROMPT_ENGINEERING_NOTES.md`.
 
 Uma versão usada numa comparação registrada **não deve ser editada** (RN05). Crie outra.
+Como a v2 reutiliza `prompts/v1/*.md`, editar uma tarefa da v1 muda as duas versões.
 
 ---
 
@@ -418,7 +488,8 @@ Arquivos em `OUTPUT_DIR` (padrão `outputs/`, ignorado pelo git):
   "customer_profile": { "id": "c01", "technical_level": "leigo", "...": "..." },
   "ticket": { "id": "t02", "text": "O Wi-Fi cai várias vezes por dia..." },
   "content_type": "resolution_steps",
-  "prompt_version": "v2",
+  "prompt_version": "v3",
+  "prompt_layers": { "base": true, "domain": true, "tasks": "v3", "role": null },
   "template_hash": "3f9a...",
   "provider": "gemini",
   "model": "gemini-2.5-flash",
@@ -443,15 +514,16 @@ Arquivos em `OUTPUT_DIR` (padrão `outputs/`, ignorado pelo git):
   "ticket": { "...": "..." },
   "content_type": "resolution_steps",
   "provider": "gemini", "model": "gemini-2.5-flash", "config": { "...": "..." },
-  "versions": ["v1", "v2"],
-  "winner": "v2",
+  "versions": ["v1", "v2", "v3"],
+  "winner": "v3",
   "runs": [
     { "...registro de geração v1...": "", "evaluation": {
         "clarity": { "score": 3, "justification": "..." },
         "customer_fit": { "score": 2, "justification": "..." },
         "actionability": { "score": 3, "justification": "..." },
         "average": 2.67, "evaluated_by": "human" } },
-    { "...registro de geração v2 com evaluation...": "" }
+    { "...registro de geração v2 com evaluation...": "" },
+    { "...registro de geração v3 com evaluation...": "" }
   ]
 }
 ```
@@ -472,8 +544,8 @@ Cada critério recebe uma nota inteira de 1 a 5 e uma justificativa não vazia, 
 Nota fora do intervalo, não inteira ou justificativa vazia é rejeitada. A comparação garante que
 só a versão do prompt varia (mesmo perfil, ticket, provedor, modelo e config).
 
-A comparação de referência v1×v2 e sua análise estão em
-[PROMPT_ENGINEERING_NOTES.md](PROMPT_ENGINEERING_NOTES.md#4-comparação-registrada-rubrica-manual).
+A comparação de referência v1 × v2 × v3 e sua análise estão em
+[PROMPT_ENGINEERING_NOTES.md](PROMPT_ENGINEERING_NOTES.md#5-comparação-registrada-rubrica-manual).
 
 ---
 
@@ -504,8 +576,10 @@ diretório temporário, mesmo que exista um `.env` configurado com o Gemini.
 
 | Arquivo | O que prova |
 |---|---|
-| [tests/test_cache.py](tests/test_cache.py) | **cache hit evita a 2ª chamada** (`call_count == 1`, `cached: true` no histórico); mudar a versão gera miss; a chave independe da ordem dos campos |
-| [tests/test_e2e_fake.py](tests/test_e2e_fake.py) | `generate` ponta a ponta pela CLI para os 4 tipos (campos do RN06, arquivo em `runs/`); ticket em texto livre; `compare` com rubrica, incluindo nota e justificativa inválidas rejeitadas; `list`; erros listando opções; chave ausente apontando o `.env` |
+| [tests/test_cache.py](tests/test_cache.py) | **cache hit evita a 2ª chamada** (`call_count == 1`, `cached: true` no histórico); cada uma das 3 versões gera miss com chave própria; a chave independe da ordem dos campos |
+| [tests/test_prompt_builder.py](tests/test_prompt_builder.py) | versões descobertas pelos manifestos; **cada versão gera um prompt diferente** (system e hash) com a mesma entrada; **a v1 não contém a base** nem o domínio; v2 = base + domínio + tarefa da v1 (sem arquivos duplicados); v3 = base + domínio + tarefa estruturada; o builder segue um manifesto novo sem mudar código; o hash muda ao editar papel/entrada/retry ou a composição; manifesto inválido gera erro claro |
+| [tests/test_flow_summary.py](tests/test_flow_summary.py) | árvore válida passa; ciclo, saída quebrada, pergunta "X ou Y?" ou sem "?", `ref` inexistente, folha com `PROC-*`, nó inalcançável, `start` inexistente, saída com `next` e `action` juntos e profundidade > 5 falham; árvore inválida gera retry 1x; o renderizador gera sempre o mesmo texto (com texto esperado fixo) e remove o id repetido do `ref`; ponta a ponta com o fake nas 3 versões (`output` + `rendered`, CLI mostra o texto); cache hit também tem `rendered` |
+| [tests/test_e2e_fake.py](tests/test_e2e_fake.py) | `generate` ponta a ponta pela CLI para os 4 tipos × 3 versões (campos do RN06, `prompt_layers`, mesmo schema de saída, arquivo em `runs/`); versão padrão `v3`; ticket em texto livre; `compare` com 3 versões (padrão) e com 2, incluindo nota e justificativa inválidas rejeitadas; `compare` com menos de 2 versões, repetidas ou inexistentes; `list` com as camadas; erros listando opções; chave ausente apontando o `.env` |
 | [tests/test_validation.py](tests/test_validation.py) | enum de perfil inválido; notas inválidas (`0`, `6`, `3.5`, `"abc"`, `True`); justificativa vazia; **retry** após JSON inválido; falha dupla não grava cache nem histórico; erro do provedor não grava nada |
 
 ---
@@ -515,7 +589,7 @@ diretório temporário, mesmo que exista um `.env` configurado com o Gemini.
 ```
 .
 ├── README.md                    # este arquivo
-├── PROMPT_ENGINEERING_NOTES.md  # estratégias, v1×v2, decisões, limitações
+├── PROMPT_ENGINEERING_NOTES.md  # estratégias, ablação v1→v2→v3, decisões, limitações
 ├── CLAUDE.md                    # regras do projeto
 ├── pyproject.toml               # pacote + comando `support_assistant` + config do pytest
 ├── requirements.txt · .env.example · .gitignore
@@ -524,17 +598,20 @@ diretório temporário, mesmo que exista um `.env` configurado com o Gemini.
 │   ├── tickets.json             # vago, comuns, técnico
 │   └── domains/wifi_isp.json    # base de conhecimento com IDs
 ├── prompts/
-│   ├── base/                    # system.md, domain.md, input.md, retry.md (iguais em todas as versões)
-│   ├── v1/                      # baseline: 4 tarefas simples
-│   └── v2/                      # estruturado: 4 tarefas detalhadas
+│   ├── base/                    # system.md, domain.md (usados conforme o manifesto); input.md, retry.md (todas)
+│   ├── v1/                      # manifest.json + role.md (papel mínimo) + 4 tarefas simples
+│   ├── v2/                      # só manifest.json: base + domínio + tarefas de v1/
+│   └── v3/                      # manifest.json + 4 tarefas estruturadas
 ├── src/support_assistant/
 │   ├── config.py · models.py · prompt_builder.py
 │   ├── llm_client.py            # fake + Gemini (única rede)
 │   ├── generators.py            # orquestração, retry, compare
+│   ├── flow_render.py           # desenha a árvore do flow_summary (determinístico)
 │   ├── cache.py · storage.py    # únicos que escrevem em disco
 │   ├── evaluation.py            # validação da rubrica
 │   ├── cli.py · __main__.py
-├── tests/                       # cache hit, e2e fake, validações
+├── scripts/                     # compare_*.py: métricas objetivas por versão
+├── tests/                       # cache hit, e2e fake, validações, prompt builder, flow_summary
 ├── samples/                     # JSONs de exemplo
 └── outputs/                     # gerado em runtime (history, cache, runs) — fora do git
 ```

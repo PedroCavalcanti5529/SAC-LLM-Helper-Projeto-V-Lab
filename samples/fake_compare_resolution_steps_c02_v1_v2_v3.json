@@ -1,7 +1,7 @@
 {
   "kind": "comparison",
-  "comparison_id": "cmp-20261121-171434-8938d8",
-  "timestamp": "2026-11-21T17:14:34-03:00",
+  "comparison_id": "cmp-20261122-140049-33cf71",
+  "timestamp": "2026-11-22T14:00:49-03:00",
   "customer_id": "c02",
   "ticket": {
     "id": "t02",
@@ -16,14 +16,15 @@
   },
   "versions": [
     "v1",
-    "v2"
+    "v2",
+    "v3"
   ],
   "winner": null,
   "runs": [
     {
       "kind": "generation",
-      "run_id": "20261121-171434-10613d",
-      "timestamp": "2026-11-21T17:14:34-03:00",
+      "run_id": "20261122-140049-1dc6de",
+      "timestamp": "2026-11-22T14:00:49-03:00",
       "customer_id": "c02",
       "customer_profile": {
         "id": "c02",
@@ -40,16 +41,22 @@
       },
       "content_type": "resolution_steps",
       "prompt_version": "v1",
-      "template_hash": "5c92912d5f776409da980bdaa16cbcf17245f7599588e21cd880a489d8396e89",
+      "prompt_layers": {
+        "base": false,
+        "domain": false,
+        "tasks": "v1",
+        "role": "v1/role.md"
+      },
+      "template_hash": "2fcd2055d8ec493d568bb0f45c6ad61c4e831abf43ba6cb9597cb8c30f91b6e8",
       "provider": "fake",
       "model": "fake-model-v1",
       "config": {
         "temperature": 0.2,
         "max_output_tokens": 4096
       },
-      "cache_key": "bad41807148c03dc1fadfa7d7cf46cd0a545efbb89f3793e2f368b356ed5c5f5",
-      "cached": true,
-      "attempts": 0,
+      "cache_key": "87b96cf3b69686cde65e0fa681cba72ec9166a87a02a085578297a0f965a3ed8",
+      "cached": false,
+      "attempts": 1,
       "latency_ms": 0,
       "output": {
         "opening": "[FAKE] Olá! Vamos resolver isso juntos.",
@@ -76,25 +83,24 @@
       "evaluation": {
         "clarity": {
           "score": 3,
-          "justification": "Identico ao v2 (saida fake)"
+          "justification": "Identico a v2/v3 (saida fake)"
         },
         "customer_fit": {
           "score": 3,
-          "justification": "Identico ao v2 (saida fake)"
+          "justification": "Identico a v2/v3 (saida fake)"
         },
         "actionability": {
           "score": 3,
-          "justification": "Identico ao v2 (saida fake)"
+          "justification": "Identico a v2/v3 (saida fake)"
         },
         "average": 3.0,
         "evaluated_by": "human"
-      },
-      "cached_from_run_id": "20261121-171417-b14aad"
+      }
     },
     {
       "kind": "generation",
-      "run_id": "20261121-171434-9d8c52",
-      "timestamp": "2026-11-21T17:14:34-03:00",
+      "run_id": "20261122-140049-bdcc78",
+      "timestamp": "2026-11-22T14:00:49-03:00",
       "customer_id": "c02",
       "customer_profile": {
         "id": "c02",
@@ -111,16 +117,22 @@
       },
       "content_type": "resolution_steps",
       "prompt_version": "v2",
-      "template_hash": "cd346cd73494ec225e0823b62c47ef058317227efdc0cf640eeb18b94c594ab7",
+      "prompt_layers": {
+        "base": true,
+        "domain": true,
+        "tasks": "v1",
+        "role": null
+      },
+      "template_hash": "05b9de02c3ef3d97c91c6a9b9606c4fd18a94011c522e7cb85a02181ca5de4ad",
       "provider": "fake",
       "model": "fake-model-v1",
       "config": {
         "temperature": 0.2,
         "max_output_tokens": 4096
       },
-      "cache_key": "57ba2f78e1a5520c8b71b63affbc12e893d0d6fa6147a8a1fbace7c4d4569bcb",
-      "cached": true,
-      "attempts": 0,
+      "cache_key": "8712e9f412357ac143f710e2de82c8df8501e43c5849c93005b51a9a59675171",
+      "cached": false,
+      "attempts": 1,
       "latency_ms": 0,
       "output": {
         "opening": "[FAKE] Olá! Vamos resolver isso juntos.",
@@ -147,20 +159,95 @@
       "evaluation": {
         "clarity": {
           "score": 3,
-          "justification": "Identico ao v1 (saida fake)"
+          "justification": "Identico a v1/v3 (saida fake)"
         },
         "customer_fit": {
           "score": 3,
-          "justification": "Identico ao v1 (saida fake)"
+          "justification": "Identico a v1/v3 (saida fake)"
         },
         "actionability": {
           "score": 3,
-          "justification": "Identico ao v1 (saida fake)"
+          "justification": "Identico a v1/v3 (saida fake)"
         },
         "average": 3.0,
         "evaluated_by": "human"
+      }
+    },
+    {
+      "kind": "generation",
+      "run_id": "20261122-140049-05eca0",
+      "timestamp": "2026-11-22T14:00:49-03:00",
+      "customer_id": "c02",
+      "customer_profile": {
+        "id": "c02",
+        "name": "Rafael Souza",
+        "technical_level": "intermediario",
+        "communication_style": "direto",
+        "channel": "chat",
+        "plan": "FIBRA-600",
+        "notes": "Trabalha em home office. Já reiniciou o roteador antes de abrir chamado em atendimentos anteriores."
       },
-      "cached_from_run_id": "20261121-171417-fea280"
+      "ticket": {
+        "id": "t02",
+        "text": "O Wi-Fi cai várias vezes por dia, principalmente à noite. No quarto do fundo quase não pega. Na sala, perto do roteador, funciona normal."
+      },
+      "content_type": "resolution_steps",
+      "prompt_version": "v3",
+      "prompt_layers": {
+        "base": true,
+        "domain": true,
+        "tasks": "v3",
+        "role": null
+      },
+      "template_hash": "73295d358a796b17451f07c99f07dd2260c434c02d7615e20f42ceae6812f98b",
+      "provider": "fake",
+      "model": "fake-model-v1",
+      "config": {
+        "temperature": 0.2,
+        "max_output_tokens": 4096
+      },
+      "cache_key": "25efa790aee250ed630700edaed6697b473c7fdc702d7df6ad2e0708651142a7",
+      "cached": false,
+      "attempts": 1,
+      "latency_ms": 0,
+      "output": {
+        "opening": "[FAKE] Olá! Vamos resolver isso juntos.",
+        "steps": [
+          {
+            "step": 1,
+            "instruction": "[FAKE] Desligue o roteador e a ONT da tomada.",
+            "why": "Limpa travamentos."
+          },
+          {
+            "step": 2,
+            "instruction": "[FAKE] Aguarde 30 segundos e ligue primeiro a ONT.",
+            "why": null
+          },
+          {
+            "step": 3,
+            "instruction": "[FAKE] Quando a luz PON ficar verde fixa, ligue o roteador.",
+            "why": null
+          }
+        ],
+        "closing": "[FAKE] Se funcionar, ótimo! Qualquer coisa, estamos aqui.",
+        "escalation": "[FAKE] Se o problema continuar, agendar visita técnica (fato POL-03)."
+      },
+      "evaluation": {
+        "clarity": {
+          "score": 3,
+          "justification": "Identico a v1/v2 (saida fake)"
+        },
+        "customer_fit": {
+          "score": 3,
+          "justification": "Identico a v1/v2 (saida fake)"
+        },
+        "actionability": {
+          "score": 3,
+          "justification": "Identico a v1/v2 (saida fake)"
+        },
+        "average": 3.0,
+        "evaluated_by": "human"
+      }
     }
   ]
 }

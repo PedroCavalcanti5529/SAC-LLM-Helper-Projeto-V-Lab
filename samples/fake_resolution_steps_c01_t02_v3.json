@@ -1,7 +1,7 @@
 {
   "kind": "generation",
-  "run_id": "20261121-171350-d544b2",
-  "timestamp": "2026-11-21T17:13:50-03:00",
+  "run_id": "20261122-140047-f26ace",
+  "timestamp": "2026-11-22T14:00:47-03:00",
   "customer_id": "c01",
   "customer_profile": {
     "id": "c01",
@@ -17,17 +17,23 @@
     "text": "O Wi-Fi cai várias vezes por dia, principalmente à noite. No quarto do fundo quase não pega. Na sala, perto do roteador, funciona normal."
   },
   "content_type": "resolution_steps",
-  "prompt_version": "v2",
-  "template_hash": "cd346cd73494ec225e0823b62c47ef058317227efdc0cf640eeb18b94c594ab7",
+  "prompt_version": "v3",
+  "prompt_layers": {
+    "base": true,
+    "domain": true,
+    "tasks": "v3",
+    "role": null
+  },
+  "template_hash": "73295d358a796b17451f07c99f07dd2260c434c02d7615e20f42ceae6812f98b",
   "provider": "fake",
   "model": "fake-model-v1",
   "config": {
     "temperature": 0.2,
     "max_output_tokens": 4096
   },
-  "cache_key": "86d77358a07723432f05b1c7cadf5ed7009be7f012f5670e3590ad8f2c828248",
-  "cached": true,
-  "attempts": 0,
+  "cache_key": "f00dbf8696fc8d7d98684878196c65abf535a0726e43f0ee9d8e8f1c7c99a7f4",
+  "cached": false,
+  "attempts": 1,
   "latency_ms": 0,
   "output": {
     "opening": "[FAKE] Olá! Vamos resolver isso juntos.",
@@ -51,6 +57,5 @@
     "closing": "[FAKE] Se funcionar, ótimo! Qualquer coisa, estamos aqui.",
     "escalation": "[FAKE] Se o problema continuar, agendar visita técnica (fato POL-03)."
   },
-  "evaluation": null,
-  "cached_from_run_id": "20261121-171349-549dfe"
+  "evaluation": null
 }
