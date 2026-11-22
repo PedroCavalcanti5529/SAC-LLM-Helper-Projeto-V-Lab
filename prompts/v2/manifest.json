@@ -1,0 +1,13 @@
+{
+  "description": "Camada base + domínio com a MESMA tarefa simples da v1 (reutiliza prompts/v1/). Mede o ganho do contexto.",
+  "layers": {
+    "base": true,
+    "domain": true,
+    "tasks": "v1"
+  },
+  "hypothesis": "Persona, limites, regras de adaptação e base de conhecimento melhoram customer_fit e reduzem invenções mesmo com a tarefa simples; a estrutura de cada campo continua genérica.",
+  "changelog": [
+    "2026-11-22: criada como base + domínio + tarefas da v1 (composição equivalente à antiga v1). Nenhum arquivo de tarefa duplicado.",
+    "2026-11-22: herda a mudança de formato do flow_summary da v1 (schema de árvore)."
+  ]
+}

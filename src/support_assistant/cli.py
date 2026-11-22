@@ -36,7 +36,7 @@ from support_assistant.models import (
     load_tickets,
     validate_content_type,
 )
-from support_assistant.prompt_builder import build_prompt, list_content_types, list_versions
+from support_assistant.prompt_builder import build_prompt, list_content_types, list_versions, load_manifest
 from support_assistant.storage import Storage
 
 LINE = "─" * 72
@@ -111,18 +111,18 @@ def render_output(content_type: str, output: dict) -> str:
             lines.append(f"     objetivo: {q['purpose']}")
         if not output["questions"]:
             lines.append("  (nenhuma: o ticket já tem o necessário)")
-    elif content_type == "flow_summary":
-        lines.append(output["title"])
-        if output.get("ascii_diagram"):
-            lines += ["", output["ascii_diagram"], ""]
-        lines.append("Pontos de decisão:")
-        for d in output["decision_points"]:
-            lines.append(f"  [{d['id']}] {d['check']}")
-            lines.append(f"      sim → {d['if_yes']}")
-            lines.append(f"      não → {d['if_no']}")
-    else:  # pragma: no cover
+    else:  # pragma: no cover  (flow_summary usa o texto de `rendered`, ver print_run)
         lines.append(str(output))
     return "\n".join(lines)
+
+
+def describe_layers(layers: dict) -> str:
+    """Ex.: 'base + domínio + tarefas v1' ou 'papel mínimo + tarefas v1'."""
+    parts = ["base" if layers["base"] else "papel mínimo"]
+    if layers["domain"]:
+        parts.append("domínio")
+    parts.append(f"tarefas {layers['tasks']}")
+    return " + ".join(parts)
 
 
 def print_run(record: dict) -> None:
@@ -132,9 +132,11 @@ def print_run(record: dict) -> None:
         f"{record['content_type']} | versão {record['prompt_version']} | cliente {record['customer_id']} | "
         f"{record['provider']}/{record['model']}"
     )
+    print(f"camadas: {describe_layers(record['prompt_layers'])}")
     print(f"cache: {cache_flag} | tentativas: {record['attempts']} | latência: {record['latency_ms']} ms")
     print(LINE)
-    print(render_output(record["content_type"], record["output"]))
+    # flow_summary: mostra a árvore desenhada pelo código (flow_render.py), guardada em `rendered`.
+    print(record.get("rendered") or render_output(record["content_type"], record["output"]))
     print(LINE)
 
 
@@ -153,9 +155,13 @@ def cmd_list(args: argparse.Namespace, settings: Settings) -> int:
     for t in tickets.values():
         preview = t["text"] if len(t["text"]) <= 70 else t["text"][:67] + "..."
         print(f"  {t['id']:<6} [{t['category']:<8}] {preview}")
-    print("\nVersões de prompt (--version / --versions):")
+    print("\nVersões de prompt (--version / --versions), cada uma acrescenta uma camada à anterior:")
     for v in list_versions(settings.prompts_dir):
-        print(f"  {v:<6} tipos: {', '.join(list_content_types(settings.prompts_dir, v))}")
+        manifest = load_manifest(settings.prompts_dir, v)
+        print(f"  {v:<6} camadas: {describe_layers(manifest.layers())}")
+        print(f"         tipos: {', '.join(list_content_types(settings.prompts_dir, v))}")
+        if manifest.description:
+            print(f"         {manifest.description}")
     print(f"\nTipos de conteúdo (--type): {', '.join(CONTENT_TYPES)}")
     print(f"Provedor atual: {settings.provider} ({settings.model})")
     return 0
@@ -167,7 +173,10 @@ def cmd_generate(args: argparse.Namespace, settings: Settings) -> int:
     if args.show_prompt:  # só monta e mostra o prompt; não chama o LLM nem grava nada
         validate_content_type(args.type)
         prompt = build_prompt(customer, ticket, args.type, args.version, settings.prompts_dir, settings.domain_path)
-        print(f"===== SYSTEM (camadas 1-3) | template_hash={prompt.template_hash[:12]} =====")
+        print(
+            f"===== SYSTEM ({describe_layers(prompt.layers)}) | versão {prompt.prompt_version} "
+            f"| template_hash={prompt.template_hash[:12]} ====="
+        )
         print(prompt.system)
         print("\n===== USER (camada 4) =====")
         print(prompt.user)
@@ -265,13 +274,18 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_gen = sub.add_parser("generate", help="gera um conteúdo")
     _add_input_args(p_gen)
-    p_gen.add_argument("--version", "-p", default="v2", help="versão do prompt (padrão: v2)")
+    p_gen.add_argument("--version", "-p", default="v3", help="versão do prompt (padrão: v3; opções em `list`)")
     p_gen.add_argument("--show-prompt", action="store_true", help="mostra o prompt montado e sai, sem chamar o LLM")
     p_gen.set_defaults(func=cmd_generate)
 
     p_cmp = sub.add_parser("compare", help="compara ≥2 versões de prompt e coleta a rubrica")
     _add_input_args(p_cmp)
-    p_cmp.add_argument("--versions", nargs="+", default=["v1", "v2"], help="versões a comparar (padrão: v1 v2)")
+    p_cmp.add_argument(
+        "--versions",
+        nargs="+",
+        default=["v1", "v2", "v3"],
+        help="2 ou mais versões a comparar (padrão: v1 v2 v3, a ablação completa)",
+    )
     p_cmp.set_defaults(func=cmd_compare)
     return parser
 

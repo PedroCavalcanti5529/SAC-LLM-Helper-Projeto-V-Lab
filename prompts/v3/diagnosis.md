@@ -8,26 +8,24 @@ com base em quê, e o que ainda falta saber para confirmar. Público: atendente 
 
 `evidence` — fatos observados, nada de interpretação.
 - Cada item é um fato concreto vindo do ticket ou do perfil, com a origem entre colchetes no final:
-  `[ticket]` ou `[perfil]`. Ex.: "Wi-Fi normal perto do roteador, ruim no quarto do fundo [ticket]".
-- Inclua também o que o cliente já testou (ex.: reiniciou, testou via cabo), pois isso elimina hipóteses.
+  `[ticket]` ou `[perfil]`.
+- Inclua também o que o cliente já testou, pois isso elimina hipóteses.
 - Não liste como evidência algo que o cliente não disse.
 
 `hypotheses` — de 1 a 4 causas possíveis, da mais para a menos provável.
-- `cause`: a causa em uma frase curta e específica (evite "problema na internet").
+- `cause`: a causa em uma frase curta e específica.
 - `likelihood`: `alta`, `media` ou `baixa`. No máximo uma hipótese `alta`. Se o ticket for vago,
   nenhuma hipótese deve ser `alta`.
 - `rationale`: uma frase ligando a hipótese às evidências e citando o id do fato da base de
-  conhecimento que a sustenta (ex.: "Sintoma bate com WIFI-01: piora com a distância.").
-- Hipóteses descartadas pelas evidências não entram (ex.: se o teste via cabo deu o mesmo resultado,
-  não proponha "interferência no Wi-Fi" como alta).
-
+  conhecimento que a sustenta (ex.: "Sintoma bate com (problema conhecido)").
+- Hipóteses descartadas pelas evidências não entram (Cheque caso uma evidencia listada contradiz com sua teoria).
 `missing_info` — o que falta para confirmar ou descartar as hipóteses.
 - Liste só itens que mudariam a conclusão. Inclua as verificações em sistemas que só o atendente
   pode fazer (painel de status, financeiro), marcadas com "(atendente verifica)".
 - Lista vazia só se o ticket já permitir uma conclusão segura.
 
 `probable_conclusion` — 1 a 2 frases: a causa mais provável E a próxima ação recomendada
-(incluindo escalonamento, citando o id `ESC-xx`, quando o critério for atendido).
+(incluindo escalonamento, citando o id `id_do_problema`, quando o critério for atendido).
 Se as evidências forem insuficientes, diga isso explicitamente e indique a coleta de informações
 como próxima ação, em vez de forçar uma causa.
 

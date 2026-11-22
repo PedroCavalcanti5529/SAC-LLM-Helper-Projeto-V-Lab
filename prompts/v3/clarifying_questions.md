@@ -2,16 +2,15 @@
 
 ## Objetivo
 Gerar o menor conjunto de perguntas que o atendente deve fazer ao cliente para conseguir
-diagnosticar o problema. Cada pergunta precisa ter um motivo: se a resposta não muda o próximo
-passo, a pergunta não entra. Público: o cliente (as perguntas serão repassadas como estão).
+diagnosticar o problema. Público: o cliente (as perguntas serão repassadas como estão).
 
 ## Processo
-1. Em `already_known`, liste o que o ticket e o perfil já informam (sintoma, onde ocorre, desde
-   quando, o que já foi testado, plano). Isso evita perguntar o que o cliente já disse.
+1. Em `already_known`, liste o que o ticket informa (ex: sintoma, onde ocorre, desde quando, o que já foi testado)
+   e o que o perfil informa (ex: plano).
 2. Identifique as hipóteses possíveis com base nos `known_issues` da base de conhecimento.
 3. Escolha as perguntas que mais separam essas hipóteses. Priorize nesta ordem:
-   a) sinais de critério de escalonamento ou de segurança (ex.: luz LOS vermelha → ESC-01);
-   b) escopo do problema (todos os aparelhos? só no Wi-Fi ou também no cabo? só em um cômodo?);
+   a) sinais de critério de escalonamento ou de segurança;
+   b) escopo do problema (ex: nocao de area/quantidade afetada);
    c) quando começou e se é constante ou intermitente;
    d) detalhes finos (velocidade medida, mensagens de erro).
 4. Quantidade: só as necessárias, no máximo 5. Ticket detalhado pode ter 1–2 perguntas; ticket

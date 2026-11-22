@@ -1,0 +1,14 @@
+{
+  "description": "Camada base + domínio + tarefa estruturada. Mede o ganho da instrução de tarefa sobre a v2.",
+  "layers": {
+    "base": true,
+    "domain": true,
+    "tasks": "v3"
+  },
+  "hypothesis": "Critérios por campo, regras para casos limite, limites de quantidade por estilo e checklist silencioso melhoram clarity e actionability em relação à v2, com o mesmo contexto.",
+  "changelog": [
+    "2026-11-22: tarefas estruturadas movidas de prompts/v2/ para prompts/v3/ sem edição (antiga v2).",
+    "2026-11-22: flow_summary.md — formato passa ao schema de árvore (igual às outras versões) e as instruções são trocadas por 6 regras enxutas (sim/não, verificação mais barata e decisiva primeiro, folhas com verbo + ref, resolvido encerra, testes compatíveis com o perfil, 3 a 5 decisões).",
+    "2026-11-22: flow_summary.md — parte do que o ticket já responde (lógica do already_known); '3 a 5 decisões' vira 'só as decisões ainda não respondidas, no máximo 5'; N2 só após esgotar as verificações de N1; PROC-xx não é folha; id só em ref."
+  ]
+}

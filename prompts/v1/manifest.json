@@ -1,0 +1,14 @@
+{
+  "description": "Baseline mínimo: papel de uma linha + tarefa simples. Sem camada base e sem domínio.",
+  "layers": {
+    "base": false,
+    "domain": false,
+    "tasks": "v1"
+  },
+  "role": "v1/role.md",
+  "hypothesis": "Sem persona, limites, regras de perfil e base de conhecimento, o modelo produz conteúdo genérico: ignora nível/estilo/canal, não cita fatos da empresa e tende a inventar o que falta.",
+  "changelog": [
+    "2026-11-22: v1 passa a ser o baseline sem camada base (antes herdava base + domínio). Tarefas inalteradas.",
+    "2026-11-22: flow_summary.md — só a seção de formato muda para o novo schema de árvore (title/start/nodes). Mudança de formato, sem regras novas."
+  ]
+}
