@@ -27,6 +27,7 @@ from support_assistant.evaluation import (
 )
 from support_assistant.generators import GenerationError, Generator
 from support_assistant.llm_client import LLMError, create_client
+from support_assistant.metrics import VIOLATION_RULES
 from support_assistant.models import (
     CONTENT_TYPES,
     CustomerProfile,
@@ -142,7 +143,63 @@ def print_run(record: dict) -> None:
     print(LINE)
     # flow_summary: mostra a árvore desenhada pelo código (flow_render.py), guardada em `rendered`.
     print(record.get("rendered") or render_output(record["content_type"], record["output"]))
+    print_violations(record)
     print(LINE)
+
+
+def print_violations(record: dict) -> None:
+    """Regras de qualidade dependentes do perfil (metrics.py): avisam, não bloqueiam."""
+    if record.get("metrics_error"):
+        print(LINE)
+        print(f"Métricas indisponíveis: {record['metrics_error']}")
+        return
+    violations = (record.get("metrics") or {}).get("violations") or []
+    if violations:
+        print(LINE)
+        print(f"Avisos de qualidade ({len(violations)}):")
+        for v in violations:
+            print(f"  - [{v['rule']}] {v['where']}: {VIOLATION_RULES.get(v['rule'], v['rule'])} ({v['detail']})")
+
+
+def _fmt_metric(value) -> str:
+    if isinstance(value, bool):
+        return "sim" if value else "não"
+    if isinstance(value, dict):
+        return " ".join(f"{k}:{v}" for k, v in value.items())
+    if isinstance(value, list):
+        return ",".join(map(str, value)) or "-"
+    return str(value)
+
+
+def print_metrics_table(runs: list[dict]) -> None:
+    """Tabela compacta: uma linha por métrica, uma coluna por versão, depois as violações."""
+    print(LINE)
+    print("Métricas objetivas (calculadas pelo código; não substituem a sua avaliação):")
+    keys: list[str] = []
+    for run in runs:
+        for key in run.get("metrics") or {}:
+            if key not in keys and key not in ("violations", "n_violations"):
+                keys.append(key)
+    keys.append("n_violations")
+    headers = ["métrica", *(run["prompt_version"] for run in runs)]
+    rows = [
+        [key, *(_fmt_metric((run.get("metrics") or {}).get(key, "erro")) for run in runs)]
+        for key in keys
+    ]
+    widths = [max(len(h), *(len(r[i]) for r in rows)) for i, h in enumerate(headers)]
+    print("  " + "  ".join(h.ljust(w) for h, w in zip(headers, widths)))
+    for row in rows:
+        print("  " + "  ".join(c.ljust(w) for c, w in zip(row, widths)))
+    print("Violações:")
+    for run in runs:
+        if run.get("metrics_error"):
+            print(f"  {run['prompt_version']}: métricas indisponíveis ({run['metrics_error']})")
+            continue
+        violations = (run.get("metrics") or {}).get("violations") or []
+        if not violations:
+            print(f"  {run['prompt_version']}: nenhuma")
+        for v in violations:
+            print(f"  {run['prompt_version']}: [{v['rule']}] {v['where']}: {v['detail']}")
 
 
 # ---------------------------------------------------------------------------
@@ -232,6 +289,7 @@ def cmd_compare(args: argparse.Namespace, settings: Settings) -> int:
 
     for run in runs:
         print_run(run)
+    print_metrics_table(runs)  # antes das notas: métricas ao lado da rubrica, gravadas juntas
 
     print("\nAgora avalie cada versão. (Ctrl+C cancela sem gravar a comparação; as saídas ficam no cache.)")
     for run in runs:

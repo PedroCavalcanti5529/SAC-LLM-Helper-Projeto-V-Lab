@@ -22,6 +22,7 @@ from pydantic import ValidationError
 from support_assistant.cache import JsonCache, make_cache_key
 from support_assistant.config import Settings
 from support_assistant.flow_render import render_flow
+from support_assistant.metrics import compute_metrics
 from support_assistant.models import (
     OUTPUT_SCHEMAS,
     CustomerProfile,
@@ -141,7 +142,8 @@ class Generator:
             "provider_retries": 0,  # repetições por falha temporária do provedor (fora da chave de cache)
             "latency_ms": 0,
             "output": None,
-            "evaluation": None,
+            "metrics": None,  # objetivas, calculadas pelo código (metrics.py)
+            "evaluation": None,  # rubrica humana (só em comparação)
         }
 
         hit = self.cache.get(cache_key)
@@ -163,10 +165,22 @@ class Generator:
 
         if content_type in RENDERERS:  # texto desenhado pelo código, separado da árvore em `output`
             record["rendered"] = RENDERERS[content_type](record["output"])
+        self._attach_metrics(record, content_type, customer)
 
         if persist:
             record["run_path"] = str(self.storage.save_run(record))
         return record
+
+    @staticmethod
+    def _attach_metrics(record: dict, content_type: str, customer: CustomerProfile) -> None:
+        """Métricas + violações dependentes do perfil. Recalculadas também em cache hit
+        (dependem só da saída e do perfil). Falha no cálculo nunca derruba a execução."""
+        try:
+            record["metrics"] = compute_metrics(content_type, record["output"], customer)
+        except Exception as exc:  # noqa: BLE001 - métrica é acessória: registra e segue
+            logger.warning("Falha ao calcular métricas (%s): %s", content_type, exc)
+            record["metrics"] = None
+            record["metrics_error"] = f"{type(exc).__name__}: {exc}"
 
     def _complete(self, system: str, user: str, content_type: str, record: dict) -> str:
         """Chama o LLM e soma as repetições por falha do provedor (retry de transporte, no llm_client)."""

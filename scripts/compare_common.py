@@ -1,12 +1,15 @@
 """Shared runner for prompt-version comparisons.
 
 Calls the project CLI (`python support_assistant generate ...`) for every
-scenario x version x repetition, reads each run JSON, computes objective
-metrics and saves a summary to src/outputs/comparisons/.
+scenario x version x repetition, reads each run JSON and its `metrics`
+field (computed by the CLI with `support_assistant.metrics`), and saves a
+summary to src/outputs/comparisons/.
 
-It drives the CLI instead of importing the package, so it exercises exactly
-what the README documents (cache, validation, history) and does not depend
-on internal module names.
+It drives the CLI instead of importing the generator, so it exercises exactly
+what the README documents (cache, validation, history). Metrics are read
+from the run JSON, never recomputed, so the script and the `compare` command
+report the same numbers. Only old runs without `metrics` are recomputed, by
+importing `support_assistant.metrics`.
 """
 from __future__ import annotations
 
@@ -20,8 +23,6 @@ import sys
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import Callable
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_SRC = REPO_ROOT / "src"
 
@@ -30,17 +31,37 @@ DEFAULT_VERSIONS = "v1,v2,v3"
 
 RUN_PATH_RE = re.compile(r"JSON da execu\S*o:\s*(\S+\.json)")
 CACHE_RE = re.compile(r"cache:\s*([^\s|]+)")
-KB_ID_RE = re.compile(r"\b[A-Z]{2,6}-\d{2}\b")
 
-MetricsFn = Callable[[dict], dict]
+
+# ---------------------------------------------------------------- metrics
+def run_metrics(content_type: str, row: dict) -> tuple[dict, str]:
+    """Metrics of a run: from the run JSON if present, else recomputed (old runs).
+
+    Returns (metrics, source). Never raises: errors become {"metrics_error": ...}.
+    """
+    if isinstance(row.get("metrics"), dict):
+        return row["metrics"], "run_json"
+    if row.get("metrics_error"):
+        return {"metrics_error": row["metrics_error"]}, "run_json"
+    try:
+        sys.path.insert(0, str(DEFAULT_SRC))  # no-op when the package is installed (pip install -e .)
+        from support_assistant.metrics import compute_metrics
+
+        return compute_metrics(content_type, row.get("output") or {}, row.get("customer_profile") or {}), "recomputed"
+    except Exception as exc:  # metrics must never kill the batch
+        return {"metrics_error": str(exc)}, "recomputed"
+
+
+def table_view(metrics: dict) -> dict:
+    """Flat version for the terminal table: the violation list becomes counts per rule."""
+    flat = {k: v for k, v in metrics.items() if k != "violations"}
+    for v in metrics.get("violations") or []:
+        key = f"v_{v['rule']}"
+        flat[key] = flat.get(key, 0) + 1
+    return flat
 
 
 # ---------------------------------------------------------------- helpers
-def kb_ids(value) -> list[str]:
-    """Knowledge-base ids (EQ-01, ESC-02...) cited anywhere in a JSON value."""
-    return sorted(set(KB_ID_RE.findall(json.dumps(value, ensure_ascii=False))))
-
-
 def parse_scenarios(raw: str) -> list[tuple[str, str]]:
     pairs = []
     for item in raw.split(","):
@@ -76,9 +97,9 @@ def run_one(src: Path, customer: str, ticket: str, content_type: str,
         return {**record, "status": "error",
                 "error": f"exit {proc.returncode}: " + " | ".join(tail)}
 
-    run_path = src / match.group(1).replace("\\", "/")
+    run_path = src / match.group(1).replace("\\", "/")  # absolute OUTPUT_DIR: `/` keeps the absolute path
     cache = CACHE_RE.search(stdout)
-    record.update(run_file=str(run_path.relative_to(src)),
+    record.update(run_file=str(run_path.relative_to(src)) if run_path.is_relative_to(src) else str(run_path),
                   cached=(cache.group(1).lower() in {"sim", "yes", "true", "hit"}) if cache else None)
 
     try:
@@ -86,7 +107,11 @@ def run_one(src: Path, customer: str, ticket: str, content_type: str,
     except (OSError, json.JSONDecodeError) as exc:
         return {**record, "status": "error", "error": f"could not read run JSON: {exc}"}
 
-    record.update(status="ok", run_id=data.get("run_id"), output=data.get("output"))
+    record.update(status="ok", run_id=data.get("run_id"), output=data.get("output"),
+                  customer_profile=data.get("customer_profile"),
+                  metrics=data.get("metrics"))  # None in runs saved before metrics existed
+    if data.get("metrics_error"):
+        record["metrics_error"] = data["metrics_error"]
     return record
 
 
@@ -95,7 +120,7 @@ def print_table(rows: list[dict], metric_keys: list[str]) -> None:
     headers = ["scenario", "ver", "rep", "status", "cached", *metric_keys]
     table = []
     for r in rows:
-        m = r.get("metrics", {})
+        m = table_view(r.get("metrics") or {})
         table.append([f"{r['customer_id']}+{r['ticket_id']}", r["prompt_version"],
                       str(r["rep"]), r["status"], str(r.get("cached", "")),
                       *[_fmt(m.get(k, "")) for k in metric_keys]])
@@ -109,6 +134,8 @@ def print_table(rows: list[dict], metric_keys: list[str]) -> None:
 def _fmt(value) -> str:
     if isinstance(value, float):
         return f"{value:.2f}"
+    if isinstance(value, dict):
+        return " ".join(f"{k}:{v}" for k, v in value.items())
     if isinstance(value, list):
         return ",".join(map(str, value)) or "-"
     return str(value)
@@ -119,7 +146,7 @@ def aggregate(rows: list[dict], metric_keys: list[str]) -> list[dict]:
     groups: dict[tuple, list[dict]] = defaultdict(list)
     for r in rows:
         if r["status"] == "ok":
-            groups[(r["customer_id"], r["ticket_id"], r["prompt_version"])].append(r["metrics"])
+            groups[(r["customer_id"], r["ticket_id"], r["prompt_version"])].append(table_view(r["metrics"]))
     out = []
     for (customer, ticket, version), metrics in groups.items():
         means = {}
@@ -133,7 +160,7 @@ def aggregate(rows: list[dict], metric_keys: list[str]) -> list[dict]:
 
 
 # ---------------------------------------------------------------- main
-def main(content_type: str, metrics_fn: MetricsFn) -> int:
+def main(content_type: str) -> int:
     ap = argparse.ArgumentParser(description=f"Run v1/v2/v3 comparisons for {content_type}.")
     ap.add_argument("--scenarios", default=DEFAULT_SCENARIOS,
                     help=f"customer:ticket pairs, comma-separated (default {DEFAULT_SCENARIOS})")
@@ -177,10 +204,7 @@ def main(content_type: str, metrics_fn: MetricsFn) -> int:
                 r = run_one(src, customer, ticket, content_type, version, extra)
                 r["rep"] = rep
                 if r["status"] == "ok":
-                    try:
-                        r["metrics"] = metrics_fn(r["output"] or {})
-                    except Exception as exc:  # metrics must never kill the batch
-                        r["metrics"] = {"metrics_error": str(exc)}
+                    r["metrics"], r["metrics_source"] = run_metrics(content_type, r)
                     print("ok" + (" (cache)" if r.get("cached") else ""))
                 else:
                     print("ERROR:", r["error"])
@@ -189,7 +213,7 @@ def main(content_type: str, metrics_fn: MetricsFn) -> int:
     if args.dry_run:
         return 0
 
-    metric_keys = sorted({k for r in rows for k in r.get("metrics", {})})
+    metric_keys = sorted({k for r in rows for k in table_view(r.get("metrics") or {})})
     print_table(rows, metric_keys)
 
     if args.repeats > 1 and any(r.get("cached") and r["rep"] > 1 for r in rows):
