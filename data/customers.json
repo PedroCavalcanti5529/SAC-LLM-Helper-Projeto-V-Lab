@@ -1,0 +1,38 @@
+[
+  {
+    "id": "c01",
+    "name": "Marta Oliveira",
+    "technical_level": "leigo",
+    "communication_style": "didatico",
+    "channel": "telefone",
+    "plan": "FIBRA-300",
+    "notes": "72 anos, usa a internet para videochamadas com a família. Prefere ser guiada passo a passo."
+  },
+  {
+    "id": "c02",
+    "name": "Rafael Souza",
+    "technical_level": "intermediario",
+    "communication_style": "direto",
+    "channel": "chat",
+    "plan": "FIBRA-600",
+    "notes": "Trabalha em home office. Já reiniciou o roteador antes de abrir chamado em atendimentos anteriores."
+  },
+  {
+    "id": "c03",
+    "name": "Juliana Martins",
+    "technical_level": "avancado",
+    "communication_style": "detalhado",
+    "channel": "email",
+    "plan": "FIBRA-1G",
+    "notes": "Desenvolvedora de software. Costuma enviar evidências técnicas (ping, traceroute)."
+  },
+  {
+    "id": "c04",
+    "name": "Antônio Ferreira",
+    "technical_level": "leigo",
+    "communication_style": "direto",
+    "channel": "chat",
+    "plan": "FIBRA-300",
+    "notes": "Dono de uma pequena padaria; a maquininha de cartão usa o Wi-Fi."
+  }
+]

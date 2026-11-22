@@ -1,0 +1,22 @@
+[
+  {
+    "id": "t01",
+    "category": "vago",
+    "text": "minha internet não tá boa, resolve aí por favor"
+  },
+  {
+    "id": "t02",
+    "category": "comum",
+    "text": "O Wi-Fi cai várias vezes por dia, principalmente à noite. No quarto do fundo quase não pega. Na sala, perto do roteador, funciona normal."
+  },
+  {
+    "id": "t03",
+    "category": "tecnico",
+    "text": "Desde ontem à noite tenho latência alta (80-150 ms, normalmente 8 ms) e ~5% de perda de pacotes para servidores de jogos e para 8.8.8.8. Testei via cabo direto no roteador, mesmo resultado. Traceroute mostra a perda a partir do 2º salto. O LED PON da ONT está verde fixo e o LOS apagado."
+  },
+  {
+    "id": "t04",
+    "category": "comum",
+    "text": "A internet ficou fora o dia todo, a luz vermelha da caixinha da fibra está acesa e piscando. Já tirei da tomada e nada."
+  }
+]

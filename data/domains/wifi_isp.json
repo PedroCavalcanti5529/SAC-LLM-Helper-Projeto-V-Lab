@@ -1,0 +1,98 @@
+{
+  "company": {
+    "name": "NetVale Fibra",
+    "description": "Provedor fictício de internet residencial e pequenas empresas por fibra óptica (FTTH).",
+    "support_hours": "Atendimento humano todos os dias, 8h às 22h. Visitas técnicas de segunda a sábado, 8h às 18h."
+  },
+  "plans": [
+    { "id": "PLAN-01", "code": "FIBRA-300", "download_mbps": 300, "upload_mbps": 150, "router": "NV-AX1500" },
+    { "id": "PLAN-02", "code": "FIBRA-600", "download_mbps": 600, "upload_mbps": 300, "router": "NV-AX3000" },
+    { "id": "PLAN-03", "code": "FIBRA-1G", "download_mbps": 1000, "upload_mbps": 500, "router": "NV-AX3000" }
+  ],
+  "equipment": [
+    {
+      "id": "EQ-01",
+      "name": "ONT NV-ONT1 (a 'caixinha da fibra')",
+      "facts": [
+        "Recebe a fibra óptica e entrega internet ao roteador por cabo de rede.",
+        "LED PWR verde: ligada.",
+        "LED PON verde fixo: conectada à rede da NetVale. PON piscando: sincronizando (normal por até 2 minutos após ligar).",
+        "LED LOS apagado: sinal óptico OK. LOS vermelho (fixo ou piscando): sem sinal óptico, fibra rompida/dobrada ou falha externa. Não se resolve reiniciando.",
+        "O cliente não deve abrir a ONT nem desconectar o cabo de fibra (verde/azul)."
+      ]
+    },
+    {
+      "id": "EQ-02",
+      "name": "Roteadores Wi-Fi 6 NV-AX1500 e NV-AX3000",
+      "facts": [
+        "Dual-band: rede 2.4 GHz (maior alcance, menor velocidade, sofre mais interferência) e 5 GHz (mais rápida, menor alcance, atravessa pior paredes).",
+        "Nome da rede e senha padrão ficam na etiqueta embaixo do roteador.",
+        "Painel de administração em http://192.168.0.1 (acesso com a senha da etiqueta).",
+        "NV-AX3000 suporta rede mesh com o repetidor NV-MESH1.",
+        "Alcance típico: 1 a 2 paredes de alvenaria com boa qualidade."
+      ]
+    }
+  ],
+  "known_issues": [
+    {
+      "id": "WIFI-01",
+      "symptom": "Wi-Fi fraco ou caindo em cômodos distantes do roteador; normal perto dele.",
+      "likely_causes": ["Distância/paredes", "Roteador em local fechado ou no chão", "Interferência na faixa 2.4 GHz (micro-ondas, redes vizinhas)"],
+      "customer_checks": ["Testar perto do roteador", "Verificar se o roteador está em local alto, central e aberto"],
+      "agent_actions": ["Orientar reposicionamento", "Sugerir uso da rede 5 GHz quando perto", "Oferecer repetidor mesh NV-MESH1 (plano FIBRA-600 ou superior; cobrança conforme tabela comercial, que o assistente não conhece)"]
+    },
+    {
+      "id": "WIFI-02",
+      "symptom": "Lentidão ou quedas principalmente à noite.",
+      "likely_causes": ["Congestionamento de canal Wi-Fi com vizinhos (horário de pico residencial)", "Muitos dispositivos simultâneos", "Raramente: saturação regional da rede (só confirmável pelo painel de status)"],
+      "customer_checks": ["Comparar velocidade via cabo e via Wi-Fi no mesmo horário"],
+      "agent_actions": ["Se via cabo estiver normal: problema de Wi-Fi local", "Se via cabo também estiver ruim: verificar painel de status e abrir chamado N2"]
+    },
+    {
+      "id": "NET-01",
+      "symptom": "Sem internet em nenhum dispositivo.",
+      "likely_causes": ["LOS vermelho (sem sinal óptico)", "Equipamento travado", "Falha massiva na região", "Pendência financeira (bloqueio)"],
+      "customer_checks": ["Observar LEDs PWR, PON e LOS da ONT", "Reiniciar conforme PROC-01"],
+      "agent_actions": ["Consultar painel de status de rede", "Consultar situação financeira no cadastro", "Se LOS vermelho: agendar visita técnica"]
+    },
+    {
+      "id": "NET-02",
+      "symptom": "Latência alta e/ou perda de pacotes mesmo via cabo.",
+      "likely_causes": ["Problema na rede da NetVale ou de trânsito (após o roteador do cliente)", "Equipamento do cliente com defeito (menos provável se o teste foi via cabo)"],
+      "customer_checks": ["Teste via cabo", "ping e traceroute para 8.8.8.8 (clientes avançados)"],
+      "agent_actions": ["Coletar horário de início, resultados de ping/traceroute e IP público", "Escalar para N2 Rede com as evidências"]
+    },
+    {
+      "id": "SPEED-01",
+      "symptom": "Velocidade abaixo do contratado.",
+      "likely_causes": ["Teste feito via Wi-Fi ou em aparelho antigo", "Muitos dispositivos usando ao mesmo tempo"],
+      "customer_checks": ["Teste em velocidade.netvale.example via cabo, com outros aparelhos desconectados"],
+      "agent_actions": ["Velocidade via cabo abaixo de 80% do plano em 3 testes: abrir chamado N2"]
+    }
+  ],
+  "procedures": [
+    {
+      "id": "PROC-01",
+      "name": "Reinício correto dos equipamentos",
+      "steps": ["Desligar ONT e roteador da tomada", "Aguardar 30 segundos", "Ligar primeiro a ONT", "Aguardar o LED PON ficar verde fixo (até 2 minutos)", "Ligar o roteador e aguardar 2 minutos"]
+    },
+    {
+      "id": "PROC-02",
+      "name": "Teste via cabo",
+      "steps": ["Conectar um computador a uma porta LAN amarela do roteador com cabo de rede", "Desativar o Wi-Fi do computador", "Repetir o teste (navegação, velocidade ou ping)"]
+    }
+  ],
+  "policies": [
+    { "id": "POL-01", "text": "O suporte nunca pede a senha do Wi-Fi, do painel do roteador, de banco ou de cartão." },
+    { "id": "POL-02", "text": "Créditos, descontos e reembolsos só podem ser concedidos pelo setor financeiro após análise. O suporte não promete valores." },
+    { "id": "POL-03", "text": "Visita técnica é agendada pelo atendente no sistema, com prazo de até 48 horas úteis. Sem custo quando a falha é da rede ou do equipamento da NetVale." },
+    { "id": "POL-04", "text": "Falhas massivas aparecem no painel de status interno; somente o atendente consegue consultar." },
+    { "id": "POL-05", "text": "No canal telefone, não ditar links longos nem comandos; preferir orientar pelo que o cliente vê (cores de luzes, botões)." }
+  ],
+  "escalation": [
+    { "id": "ESC-01", "when": "LED LOS vermelho", "to": "Visita técnica (POL-03)" },
+    { "id": "ESC-02", "when": "Latência/perda ou lentidão confirmadas via cabo, após PROC-01", "to": "N2 Rede, com evidências coletadas" },
+    { "id": "ESC-03", "when": "Cliente sem internet com falha massiva confirmada no painel", "to": "Informar a ocorrência aberta; não abrir chamado duplicado" },
+    { "id": "ESC-04", "when": "Problema persiste após os passos de N1", "to": "N2 Suporte" }
+  ]
+}
