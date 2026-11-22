@@ -1,0 +1,55 @@
+{
+  "kind": "generation",
+  "run_id": "20261121-171350-4c9789",
+  "timestamp": "2026-11-21T17:13:50-03:00",
+  "customer_id": "c03",
+  "customer_profile": {
+    "id": "c03",
+    "name": "Juliana Martins",
+    "technical_level": "avancado",
+    "communication_style": "detalhado",
+    "channel": "email",
+    "plan": "FIBRA-1G",
+    "notes": "Desenvolvedora de software. Costuma enviar evidências técnicas (ping, traceroute)."
+  },
+  "ticket": {
+    "id": "t03",
+    "text": "Desde ontem à noite tenho latência alta (80-150 ms, normalmente 8 ms) e ~5% de perda de pacotes para servidores de jogos e para 8.8.8.8. Testei via cabo direto no roteador, mesmo resultado. Traceroute mostra a perda a partir do 2º salto. O LED PON da ONT está verde fixo e o LOS apagado."
+  },
+  "content_type": "diagnosis",
+  "prompt_version": "v2",
+  "template_hash": "bda61960343ebf1030fd3732596f72c80b3d978489afbb6a6dae1b1058f1cc24",
+  "provider": "fake",
+  "model": "fake-model-v1",
+  "config": {
+    "temperature": 0.2,
+    "max_output_tokens": 4096
+  },
+  "cache_key": "5c9a3b31d2d73df639f61a968f478752031ecf1e648d9967a6413f7822556b49",
+  "cached": false,
+  "attempts": 1,
+  "latency_ms": 0,
+  "output": {
+    "hypotheses": [
+      {
+        "cause": "[FAKE] Interferência ou alcance insuficiente do Wi-Fi 2.4 GHz",
+        "likelihood": "alta",
+        "rationale": "Sintoma intermitente e dependente do cômodo (fato WIFI-01)."
+      },
+      {
+        "cause": "[FAKE] Roteador travado após longo tempo ligado",
+        "likelihood": "media",
+        "rationale": "Reinício costuma resolver lentidão progressiva (fato PROC-01)."
+      }
+    ],
+    "evidence": [
+      "[FAKE] Cliente relata quedas frequentes no Wi-Fi."
+    ],
+    "missing_info": [
+      "[FAKE] Estado dos LEDs da ONT",
+      "[FAKE] Se o problema ocorre também no cabo"
+    ],
+    "probable_conclusion": "[FAKE] Problema local de Wi-Fi; validar LEDs e testar via cabo antes de agendar visita."
+  },
+  "evaluation": null
+}

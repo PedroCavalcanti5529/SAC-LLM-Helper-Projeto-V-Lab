@@ -1,0 +1,166 @@
+{
+  "kind": "comparison",
+  "comparison_id": "cmp-20261121-171434-8938d8",
+  "timestamp": "2026-11-21T17:14:34-03:00",
+  "customer_id": "c02",
+  "ticket": {
+    "id": "t02",
+    "text": "O Wi-Fi cai várias vezes por dia, principalmente à noite. No quarto do fundo quase não pega. Na sala, perto do roteador, funciona normal."
+  },
+  "content_type": "resolution_steps",
+  "provider": "fake",
+  "model": "fake-model-v1",
+  "config": {
+    "temperature": 0.2,
+    "max_output_tokens": 4096
+  },
+  "versions": [
+    "v1",
+    "v2"
+  ],
+  "winner": null,
+  "runs": [
+    {
+      "kind": "generation",
+      "run_id": "20261121-171434-10613d",
+      "timestamp": "2026-11-21T17:14:34-03:00",
+      "customer_id": "c02",
+      "customer_profile": {
+        "id": "c02",
+        "name": "Rafael Souza",
+        "technical_level": "intermediario",
+        "communication_style": "direto",
+        "channel": "chat",
+        "plan": "FIBRA-600",
+        "notes": "Trabalha em home office. Já reiniciou o roteador antes de abrir chamado em atendimentos anteriores."
+      },
+      "ticket": {
+        "id": "t02",
+        "text": "O Wi-Fi cai várias vezes por dia, principalmente à noite. No quarto do fundo quase não pega. Na sala, perto do roteador, funciona normal."
+      },
+      "content_type": "resolution_steps",
+      "prompt_version": "v1",
+      "template_hash": "5c92912d5f776409da980bdaa16cbcf17245f7599588e21cd880a489d8396e89",
+      "provider": "fake",
+      "model": "fake-model-v1",
+      "config": {
+        "temperature": 0.2,
+        "max_output_tokens": 4096
+      },
+      "cache_key": "bad41807148c03dc1fadfa7d7cf46cd0a545efbb89f3793e2f368b356ed5c5f5",
+      "cached": true,
+      "attempts": 0,
+      "latency_ms": 0,
+      "output": {
+        "opening": "[FAKE] Olá! Vamos resolver isso juntos.",
+        "steps": [
+          {
+            "step": 1,
+            "instruction": "[FAKE] Desligue o roteador e a ONT da tomada.",
+            "why": "Limpa travamentos."
+          },
+          {
+            "step": 2,
+            "instruction": "[FAKE] Aguarde 30 segundos e ligue primeiro a ONT.",
+            "why": null
+          },
+          {
+            "step": 3,
+            "instruction": "[FAKE] Quando a luz PON ficar verde fixa, ligue o roteador.",
+            "why": null
+          }
+        ],
+        "closing": "[FAKE] Se funcionar, ótimo! Qualquer coisa, estamos aqui.",
+        "escalation": "[FAKE] Se o problema continuar, agendar visita técnica (fato POL-03)."
+      },
+      "evaluation": {
+        "clarity": {
+          "score": 3,
+          "justification": "Identico ao v2 (saida fake)"
+        },
+        "customer_fit": {
+          "score": 3,
+          "justification": "Identico ao v2 (saida fake)"
+        },
+        "actionability": {
+          "score": 3,
+          "justification": "Identico ao v2 (saida fake)"
+        },
+        "average": 3.0,
+        "evaluated_by": "human"
+      },
+      "cached_from_run_id": "20261121-171417-b14aad"
+    },
+    {
+      "kind": "generation",
+      "run_id": "20261121-171434-9d8c52",
+      "timestamp": "2026-11-21T17:14:34-03:00",
+      "customer_id": "c02",
+      "customer_profile": {
+        "id": "c02",
+        "name": "Rafael Souza",
+        "technical_level": "intermediario",
+        "communication_style": "direto",
+        "channel": "chat",
+        "plan": "FIBRA-600",
+        "notes": "Trabalha em home office. Já reiniciou o roteador antes de abrir chamado em atendimentos anteriores."
+      },
+      "ticket": {
+        "id": "t02",
+        "text": "O Wi-Fi cai várias vezes por dia, principalmente à noite. No quarto do fundo quase não pega. Na sala, perto do roteador, funciona normal."
+      },
+      "content_type": "resolution_steps",
+      "prompt_version": "v2",
+      "template_hash": "cd346cd73494ec225e0823b62c47ef058317227efdc0cf640eeb18b94c594ab7",
+      "provider": "fake",
+      "model": "fake-model-v1",
+      "config": {
+        "temperature": 0.2,
+        "max_output_tokens": 4096
+      },
+      "cache_key": "57ba2f78e1a5520c8b71b63affbc12e893d0d6fa6147a8a1fbace7c4d4569bcb",
+      "cached": true,
+      "attempts": 0,
+      "latency_ms": 0,
+      "output": {
+        "opening": "[FAKE] Olá! Vamos resolver isso juntos.",
+        "steps": [
+          {
+            "step": 1,
+            "instruction": "[FAKE] Desligue o roteador e a ONT da tomada.",
+            "why": "Limpa travamentos."
+          },
+          {
+            "step": 2,
+            "instruction": "[FAKE] Aguarde 30 segundos e ligue primeiro a ONT.",
+            "why": null
+          },
+          {
+            "step": 3,
+            "instruction": "[FAKE] Quando a luz PON ficar verde fixa, ligue o roteador.",
+            "why": null
+          }
+        ],
+        "closing": "[FAKE] Se funcionar, ótimo! Qualquer coisa, estamos aqui.",
+        "escalation": "[FAKE] Se o problema continuar, agendar visita técnica (fato POL-03)."
+      },
+      "evaluation": {
+        "clarity": {
+          "score": 3,
+          "justification": "Identico ao v1 (saida fake)"
+        },
+        "customer_fit": {
+          "score": 3,
+          "justification": "Identico ao v1 (saida fake)"
+        },
+        "actionability": {
+          "score": 3,
+          "justification": "Identico ao v1 (saida fake)"
+        },
+        "average": 3.0,
+        "evaluated_by": "human"
+      },
+      "cached_from_run_id": "20261121-171417-fea280"
+    }
+  ]
+}

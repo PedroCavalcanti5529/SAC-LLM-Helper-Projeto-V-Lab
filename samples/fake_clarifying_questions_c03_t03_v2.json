@@ -1,0 +1,50 @@
+{
+  "kind": "generation",
+  "run_id": "20261121-171350-1bbc46",
+  "timestamp": "2026-11-21T17:13:50-03:00",
+  "customer_id": "c03",
+  "customer_profile": {
+    "id": "c03",
+    "name": "Juliana Martins",
+    "technical_level": "avancado",
+    "communication_style": "detalhado",
+    "channel": "email",
+    "plan": "FIBRA-1G",
+    "notes": "Desenvolvedora de software. Costuma enviar evidências técnicas (ping, traceroute)."
+  },
+  "ticket": {
+    "id": "t03",
+    "text": "Desde ontem à noite tenho latência alta (80-150 ms, normalmente 8 ms) e ~5% de perda de pacotes para servidores de jogos e para 8.8.8.8. Testei via cabo direto no roteador, mesmo resultado. Traceroute mostra a perda a partir do 2º salto. O LED PON da ONT está verde fixo e o LOS apagado."
+  },
+  "content_type": "clarifying_questions",
+  "prompt_version": "v2",
+  "template_hash": "c7d7e9552bef58b3edd991073eea2a2e4f65fb7c8e5abd12f846c81179f94301",
+  "provider": "fake",
+  "model": "fake-model-v1",
+  "config": {
+    "temperature": 0.2,
+    "max_output_tokens": 4096
+  },
+  "cache_key": "96cfe328e23ab3f187a658bacb105231fa50bff1ee5df7954a189233cbf86392",
+  "cached": false,
+  "attempts": 1,
+  "latency_ms": 0,
+  "output": {
+    "already_known": [
+      "[FAKE] A internet está instável"
+    ],
+    "questions": [
+      {
+        "priority": 1,
+        "question": "[FAKE] A luz LOS da ONT está vermelha?",
+        "purpose": "Descartar falta de sinal óptico."
+      },
+      {
+        "priority": 2,
+        "question": "[FAKE] O problema acontece em todos os aparelhos?",
+        "purpose": "Isolar dispositivo."
+      }
+    ]
+  },
+  "evaluation": null
+}

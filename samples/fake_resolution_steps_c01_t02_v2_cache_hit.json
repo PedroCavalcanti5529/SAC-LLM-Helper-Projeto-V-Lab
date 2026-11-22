@@ -1,0 +1,56 @@
+{
+  "kind": "generation",
+  "run_id": "20261121-171350-d544b2",
+  "timestamp": "2026-11-21T17:13:50-03:00",
+  "customer_id": "c01",
+  "customer_profile": {
+    "id": "c01",
+    "name": "Marta Oliveira",
+    "technical_level": "leigo",
+    "communication_style": "didatico",
+    "channel": "telefone",
+    "plan": "FIBRA-300",
+    "notes": "72 anos, usa a internet para videochamadas com a família. Prefere ser guiada passo a passo."
+  },
+  "ticket": {
+    "id": "t02",
+    "text": "O Wi-Fi cai várias vezes por dia, principalmente à noite. No quarto do fundo quase não pega. Na sala, perto do roteador, funciona normal."
+  },
+  "content_type": "resolution_steps",
+  "prompt_version": "v2",
+  "template_hash": "cd346cd73494ec225e0823b62c47ef058317227efdc0cf640eeb18b94c594ab7",
+  "provider": "fake",
+  "model": "fake-model-v1",
+  "config": {
+    "temperature": 0.2,
+    "max_output_tokens": 4096
+  },
+  "cache_key": "86d77358a07723432f05b1c7cadf5ed7009be7f012f5670e3590ad8f2c828248",
+  "cached": true,
+  "attempts": 0,
+  "latency_ms": 0,
+  "output": {
+    "opening": "[FAKE] Olá! Vamos resolver isso juntos.",
+    "steps": [
+      {
+        "step": 1,
+        "instruction": "[FAKE] Desligue o roteador e a ONT da tomada.",
+        "why": "Limpa travamentos."
+      },
+      {
+        "step": 2,
+        "instruction": "[FAKE] Aguarde 30 segundos e ligue primeiro a ONT.",
+        "why": null
+      },
+      {
+        "step": 3,
+        "instruction": "[FAKE] Quando a luz PON ficar verde fixa, ligue o roteador.",
+        "why": null
+      }
+    ],
+    "closing": "[FAKE] Se funcionar, ótimo! Qualquer coisa, estamos aqui.",
+    "escalation": "[FAKE] Se o problema continuar, agendar visita técnica (fato POL-03)."
+  },
+  "evaluation": null,
+  "cached_from_run_id": "20261121-171349-549dfe"
+}
