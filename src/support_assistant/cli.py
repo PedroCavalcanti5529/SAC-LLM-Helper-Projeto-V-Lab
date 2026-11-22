@@ -133,7 +133,12 @@ def print_run(record: dict) -> None:
         f"{record['provider']}/{record['model']}"
     )
     print(f"camadas: {describe_layers(record['prompt_layers'])}")
-    print(f"cache: {cache_flag} | tentativas: {record['attempts']} | latência: {record['latency_ms']} ms")
+    retries = record.get("provider_retries", 0)
+    retries_info = f" | repetições do provedor: {retries}" if retries else ""
+    print(
+        f"cache: {cache_flag} | tentativas: {record['attempts']}{retries_info} | "
+        f"latência: {record['latency_ms']} ms"
+    )
     print(LINE)
     # flow_summary: mostra a árvore desenhada pelo código (flow_render.py), guardada em `rendered`.
     print(record.get("rendered") or render_output(record["content_type"], record["output"]))
@@ -300,7 +305,8 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.WARNING,
-        format="[%(levelname)s] %(message)s",
+        # nome do módulo no aviso: distingue retry do provedor (llm_client) de retry por schema (generators)
+        format="[%(levelname)s] %(name)s: %(message)s",
     )
     try:
         settings = load_settings()

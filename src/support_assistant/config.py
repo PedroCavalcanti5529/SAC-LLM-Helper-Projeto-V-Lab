@@ -22,7 +22,11 @@ DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "outputs"
 
 SUPPORTED_PROVIDERS = ("fake", "gemini")
 FAKE_MODEL = "fake-model-v1"
-DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
+DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite"
+DEFAULT_MAX_RETRIES = 3
+DEFAULT_BACKOFF_BASE_SECONDS = 2.0
+MAX_RETRIES_LIMIT = 10
+MAX_BACKOFF_BASE_SECONDS = 60.0
 
 
 class ConfigError(Exception):
@@ -40,6 +44,10 @@ class Settings:
     data_dir: Path
     prompts_dir: Path
     output_dir: Path
+    # Retry por falha temporária do provedor (429, 5xx, timeout, conexão). Não afeta a saída,
+    # por isso não entra em `generation_config` nem na chave de cache.
+    max_retries: int = DEFAULT_MAX_RETRIES
+    backoff_base_seconds: float = DEFAULT_BACKOFF_BASE_SECONDS
 
     @property
     def generation_config(self) -> dict:
@@ -104,6 +112,16 @@ def load_settings(env_file: Path | None = None) -> Settings:
     if not 0.0 <= temperature <= 2.0:
         raise ConfigError("LLM_TEMPERATURE deve estar entre 0 e 2. Verifique o .env.")
 
+    max_retries = _read_int("LLM_MAX_RETRIES", DEFAULT_MAX_RETRIES)
+    if not 0 <= max_retries <= MAX_RETRIES_LIMIT:
+        raise ConfigError(f"LLM_MAX_RETRIES deve estar entre 0 e {MAX_RETRIES_LIMIT}. Verifique o .env.")
+
+    backoff_base = _read_float("LLM_BACKOFF_BASE_SECONDS", DEFAULT_BACKOFF_BASE_SECONDS)
+    if not 0.0 <= backoff_base <= MAX_BACKOFF_BASE_SECONDS:
+        raise ConfigError(
+            f"LLM_BACKOFF_BASE_SECONDS deve estar entre 0 e {MAX_BACKOFF_BASE_SECONDS:.0f}. Verifique o .env."
+        )
+
     output_dir = Path(os.getenv("OUTPUT_DIR", "").strip() or DEFAULT_OUTPUT_DIR)
 
     return Settings(
@@ -116,4 +134,6 @@ def load_settings(env_file: Path | None = None) -> Settings:
         data_dir=DATA_DIR,
         prompts_dir=PROMPTS_DIR,
         output_dir=output_dir,
+        max_retries=max_retries,
+        backoff_base_seconds=backoff_base,
     )

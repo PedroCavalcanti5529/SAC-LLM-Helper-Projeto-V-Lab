@@ -137,7 +137,8 @@ class Generator:
             "config": config,
             "cache_key": cache_key,
             "cached": False,
-            "attempts": 0,
+            "attempts": 0,  # tentativas por schema (1 ou 2)
+            "provider_retries": 0,  # repetições por falha temporária do provedor (fora da chave de cache)
             "latency_ms": 0,
             "output": None,
             "evaluation": None,
@@ -167,14 +168,20 @@ class Generator:
             record["run_path"] = str(self.storage.save_run(record))
         return record
 
-    def _call_with_retry(self, system: str, user: str, content_type: str, record: dict) -> tuple[dict, int]:
+    def _complete(self, system: str, user: str, content_type: str, record: dict) -> str:
+        """Chama o LLM e soma as repetições por falha do provedor (retry de transporte, no llm_client)."""
         raw = self.client.complete(system, user, content_type)
+        record["provider_retries"] += getattr(self.client, "last_provider_retries", 0)
+        return raw
+
+    def _call_with_retry(self, system: str, user: str, content_type: str, record: dict) -> tuple[dict, int]:
+        raw = self._complete(system, user, content_type, record)
         try:
             return parse_output(raw, content_type, self.kb_ids), 1
         except OutputValidationError as first_error:
-            logger.warning("Resposta inválida na 1ª tentativa: %s", first_error)
+            logger.warning("Resposta fora do schema na 1ª tentativa (retry por schema): %s", first_error)
             retry_user = user + "\n\n" + build_retry_message(self.settings.prompts_dir, str(first_error))
-            raw_retry = self.client.complete(system, retry_user, content_type)
+            raw_retry = self._complete(system, retry_user, content_type, record)
             try:
                 return parse_output(raw_retry, content_type, self.kb_ids), 2
             except OutputValidationError as second_error:
