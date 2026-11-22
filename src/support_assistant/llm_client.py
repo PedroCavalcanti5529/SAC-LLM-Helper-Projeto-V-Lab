@@ -70,10 +70,26 @@ FAKE_RESPONSES: dict[str, dict] = {
     },
     "flow_summary": {
         "title": "[FAKE] Triagem de internet instável",
-        "ascii_diagram": "[LOS vermelho?] --sim--> visita técnica\n      |\n     não\n      v\n[Cabo ok?] --não--> reiniciar equipamentos",
-        "decision_points": [
-            {"id": "D1", "check": "[FAKE] LED LOS vermelho?", "if_yes": "Agendar visita técnica", "if_no": "Ir para D2"},
-            {"id": "D2", "check": "[FAKE] Funciona via cabo?", "if_yes": "Problema de Wi-Fi", "if_no": "Reiniciar ONT e roteador"},
+        "start": "D1",
+        "nodes": [
+            {
+                "id": "D1",
+                "question": "[FAKE] A luz LOS da ONT está vermelha?",
+                "yes": {"action": "Agendar visita técnica", "ref": "ESC-01"},
+                "no": {"next": "D2"},
+            },
+            {
+                "id": "D2",
+                "question": "[FAKE] Reiniciar ONT e roteador resolveu?",
+                "yes": {"action": "Encerrar atendimento", "ref": None},
+                "no": {"next": "D3"},
+            },
+            {
+                "id": "D3",
+                "question": "[FAKE] O problema também acontece no cabo de rede?",
+                "yes": {"action": "Escalar para N2 Rede com as evidências coletadas", "ref": "ESC-02"},
+                "no": {"action": "Orientar ajustes do Wi-Fi", "ref": "WIFI-01"},
+            },
         ],
     },
 }
