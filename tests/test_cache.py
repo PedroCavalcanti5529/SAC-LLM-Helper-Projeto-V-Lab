@@ -22,9 +22,9 @@ def test_cache_hit_avoids_second_llm_call(generator, fake_client, customer, tick
 
 
 def test_cache_miss_when_version_changes(generator, fake_client, customer, ticket):
-    generator.generate(customer, ticket, "diagnosis", "v1")
-    generator.generate(customer, ticket, "diagnosis", "v2")
-    assert fake_client.call_count == 2
+    records = [generator.generate(customer, ticket, "diagnosis", v) for v in ("v1", "v2", "v3")]
+    assert fake_client.call_count == 3
+    assert len({r["cache_key"] for r in records}) == 3
 
 
 def test_cache_key_is_order_independent():
