@@ -22,6 +22,7 @@ from pydantic import ValidationError
 from support_assistant.cache import JsonCache, make_cache_key
 from support_assistant.config import Settings
 from support_assistant.flow_render import render_flow
+from support_assistant.llm_client import create_client
 from support_assistant.metrics import compute_metrics
 from support_assistant.models import (
     OUTPUT_SCHEMAS,
@@ -84,6 +85,20 @@ def parse_output(raw: str, content_type: str, kb_ids: set[str] | None = None) ->
         )
         raise OutputValidationError(f"JSON fora do schema de {content_type}: {problems}") from None
     return model.model_dump()
+
+
+def build_generator(settings: Settings, client=None) -> "Generator":
+    """Monta o Generator a partir das configurações. Usado pela CLI e pela interface web.
+
+    `client` permite injetar outro cliente de LLM (ex.: um provedor escolhido por sessão no
+    deploy); sem ele, o provedor vem de `settings`.
+    """
+    return Generator(
+        settings=settings,
+        client=client if client is not None else create_client(settings),
+        cache=JsonCache(settings.output_dir / "cache.json"),
+        storage=Storage(settings.output_dir),
+    )
 
 
 class Generator:

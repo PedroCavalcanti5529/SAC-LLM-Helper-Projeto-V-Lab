@@ -13,7 +13,6 @@ import argparse
 import logging
 import sys
 
-from support_assistant.cache import JsonCache
 from support_assistant.config import ConfigError, Settings, load_settings
 from support_assistant.evaluation import (
     RUBRIC_CRITERIA,
@@ -25,7 +24,7 @@ from support_assistant.evaluation import (
     validate_justification,
     validate_score,
 )
-from support_assistant.generators import GenerationError, Generator
+from support_assistant.generators import GenerationError, Generator, build_generator
 from support_assistant.llm_client import LLMError, create_client
 from support_assistant.metrics import VIOLATION_RULES
 from support_assistant.models import (
@@ -38,7 +37,6 @@ from support_assistant.models import (
     validate_content_type,
 )
 from support_assistant.prompt_builder import build_prompt, list_content_types, list_versions, load_manifest
-from support_assistant.storage import Storage
 
 LINE = "─" * 72
 
@@ -67,13 +65,8 @@ def resolve_ticket(settings: Settings, ticket_id: str | None, ticket_text: str |
 
 
 def make_generator(settings: Settings) -> Generator:
-    client = create_client(settings)
-    return Generator(
-        settings=settings,
-        client=client,
-        cache=JsonCache(settings.output_dir / "cache.json"),
-        storage=Storage(settings.output_dir),
-    )
+    # `create_client` passado explicitamente: os testes trocam `cli.create_client` por um cliente simulado.
+    return build_generator(settings, client=create_client(settings))
 
 
 # ---------------------------------------------------------------------------
