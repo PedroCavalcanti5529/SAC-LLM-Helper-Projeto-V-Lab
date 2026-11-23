@@ -103,7 +103,7 @@ Todos em [src/support_assistant/](../src/support_assistant/).
   - 5xx, timeout, sem conexão, resposta vazia ou bloqueada → `LLMProviderError`
 - **Retry do provedor** (separado do retry por schema): só 429, 5xx, timeout e erro de conexão são
   repetidos, até `LLM_MAX_RETRIES` vezes, com espera `base × 2^n + jitter(0..base)`. Se a resposta
-  traz `Retry-After`, espera exatamente esse tempo; acima de 60 s (ex.: cota diária) desiste na hora.
+  traz `Retry-After`, espera exatamente esse tempo; acima de 15 s (ex.: cota diária) desiste na hora.
   400/401/403/404 nunca são repetidos. Esgotadas as tentativas, a mensagem amigável acima é mostrada e
   nada vai para cache nem histórico. Cada repetição gera um aviso `[WARNING] support_assistant.llm_client: …`.
   O registro grava `provider_retries` (repetições do provedor), separado de `attempts` (tentativas
