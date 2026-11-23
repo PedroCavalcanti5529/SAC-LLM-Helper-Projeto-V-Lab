@@ -168,7 +168,7 @@ Comando `support-assistant` (ou `python -m support_assistant`). `generate` (perf
 - [x] 1 comparação v1×v2×v3 com 3 notas + justificativas
 - [x] 4 tipos geráveis
 - [x] Cache evita ≥1 chamada repetida (com teste)
-- [ ] Deploy publicado e link real no README (substituir `https://SEU-APP.streamlit.app`)
+- [x] Deploy publicado: <https://sac-llm-assistant.streamlit.app> (Streamlit Community Cloud, `APP_PUBLIC_MODE=true`)
 
 ## Convenções
 

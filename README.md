@@ -2,7 +2,7 @@
  
 [![CI](https://github.com/PedroCavalcanti5529/SAC-LLM-Helper-Projeto-V-Lab-/actions/workflows/ci.yml/badge.svg)](https://github.com/PedroCavalcanti5529/SAC-LLM-Helper-Projeto-V-Lab-/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)
-[![Streamlit](https://img.shields.io/badge/demo-Streamlit-FF4B4B?logo=streamlit&logoColor=white)](https://SEU-APP.streamlit.app)
+[![Streamlit](https://img.shields.io/badge/demo-Streamlit-FF4B4B?logo=streamlit&logoColor=white)](https://sac-llm-assistant.streamlit.app)
  
 **Assistente de suporte técnico que adapta diagnóstico, passos, perguntas e fluxo de decisão ao
 perfil de cada cliente, com prompts versionados e comparados de forma controlada.**
@@ -113,7 +113,7 @@ streamlit run app/streamlit_app.py
 Tem três telas: **Gerar**, **Comparar** (com avaliação às cegas) e **Histórico**. Elas usam o
 mesmo núcleo e o mesmo `outputs/` da CLI. O Streamlit é um extra opcional, então a CLI não depende dele.
  
-**Versão online:** <https://SEU-APP.streamlit.app>. O app abre no modo fake, sem cadastro. Para
+**Versão online:** <https://sac-llm-assistant.streamlit.app>. O app abre no modo fake, sem cadastro. Para
 respostas reais, escolha `gemini` na barra lateral e cole a **sua** chave. Ela fica só na memória
 da sessão e nunca é gravada. O histórico também é por sessão.
  
