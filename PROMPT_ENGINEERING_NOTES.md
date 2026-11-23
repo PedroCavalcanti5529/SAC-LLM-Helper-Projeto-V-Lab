@@ -1,255 +1,250 @@
 # Notas de engenharia de prompt
 
-## 1. Arquitetura do prompt (4 camadas + manifesto)
+Como os prompts foram estruturados, como as versões foram comparadas, o que a comparação mostrou
+e o que ainda não funciona. A visão geral do projeto está no [README](README.md).
 
-| Camada | Arquivo | v1 | v2 | v3 | Papel |
+## Resumo
+
+- **Ablação em três versões.** Cada versão acrescenta uma camada: v1 é o baseline, v2 acrescenta o
+  contexto (base + domínio) e v3 acrescenta a tarefa estruturada.
+- **Na comparação registrada, o ganho veio do contexto.** A média foi de 3,33 na v1 para 4,33 na v2.
+  A v3 empatou com a v2 (4,33): ganhou em acionabilidade e perdeu em clareza.
+- **Execuções repetidas separaram padrões de ruído.** Sem contexto, a v1 promete visita técnica em
+  4 de 4 execuções. Uma regra da camada base transforma passos em perguntas na v2 e na v3, em 4 de 4.
+- **As métricas objetivas pegaram o que a nota humana deixou passar.** A rubrica deu adequação 5 à
+  v3, mas as métricas encontraram "GHz" num texto para cliente leiga e um passo em forma de pergunta.
+
+---
+
+## 1. Arquitetura do prompt
+
+| # | Camada | Arquivo | v1 | v2 | v3 |
 |---|---|---|---|---|---|
-| 1. Base | `prompts/base/system.md` | — (papel mínimo `v1/role.md`) | sim | sim | persona, público de cada tipo, limites, regras de adaptação, formato JSON |
-| 2. Domínio | `prompts/base/domain.md` + `data/domains/wifi_isp.json` | não | sim | sim | fatos da empresa com IDs |
-| 3. Tarefa | `prompts/<pasta>/<tipo>.md` | `v1/` simples | `v1/` simples | `v3/` estruturada | instrução e formato de cada tipo |
-| 4. Entrada | `prompts/base/input.md` | sim | sim | sim | perfil e ticket entre tags |
+| 1 | **Base**: persona, público de cada tipo, limites, adaptação ao perfil, formato | `prompts/base/system.md` | papel mínimo (`v1/role.md`) | sim | sim |
+| 2 | **Domínio**: fatos da empresa com IDs citáveis | `prompts/base/domain.md` + `data/domains/wifi_isp.json` | não | sim | sim |
+| 3 | **Tarefa**: instrução e formato de cada tipo | `prompts/<pasta>/<tipo>.md` | `v1/` simples | `v1/` simples | `v3/` estruturada |
+| 4 | **Entrada**: perfil e ticket entre tags | `prompts/base/input.md` | sim | sim | sim |
 
-Quais camadas cada versão usa é declarado em `prompts/<versao>/manifest.json`
-(`layers.base`, `layers.domain`, `layers.tasks` + `role` quando não há base), junto de uma
-hipótese e de um changelog. O `prompt_builder` monta o prompt só a partir do manifesto; o código não
-conhece nenhuma versão pelo nome. A v2 aponta para as tarefas da v1 (`"tasks": "v1"`), sem cópia.
+```mermaid
+flowchart LR
+    subgraph v1["v1 · baseline"]
+        R1["papel mínimo"] --> T1["tarefa simples"]
+    end
+    subgraph v2["v2 · + contexto"]
+        B2["base"] --> D2["domínio"] --> T2["tarefa simples"]
+    end
+    subgraph v3["v3 · + tarefa"]
+        B3["base"] --> D3["domínio"] --> T3["tarefa estruturada"]
+    end
+```
 
-As camadas 1–3 vão na instrução de sistema e a camada 4 na mensagem do usuário. Isso separa o que
-é regra (sistema) do que é dado (usuário).
+- **Cada versão é um manifesto.** O `prompts/<versão>/manifest.json` declara as camadas, uma
+  hipótese e um changelog. O `prompt_builder` monta o prompt só a partir dele, e o código não
+  conhece nenhuma versão pelo nome. A v2 aponta para as tarefas da v1 (`"tasks": "v1"`), sem cópia.
+- **Regra e dado ficam separados.** As camadas 1 a 3 vão na instrução de sistema (regras) e a
+  camada 4 vai na mensagem do usuário (dados).
 
-## 2. Ablação v1 → v2 → v3
+## 2. Ablação e hipóteses
 
-Cada versão acrescenta **uma** camada sobre a anterior. Comparando versões vizinhas, sabemos qual
-camada causou a diferença:
+Cada salto muda uma única coisa, então a diferença entre versões vizinhas tem uma causa identificável:
 
-| Versão | System prompt | O que a comparação com a anterior mede |
+| Salto | O que muda | Hipótese (registrada no manifesto) |
 |---|---|---|
-| **v1** | papel de uma linha ("assistente de suporte técnico") + "responda apenas com JSON válido, em pt-BR" + tarefa simples | — (baseline) |
-| **v2** | base + domínio + **a mesma** tarefa simples da v1 | **v1 → v2 mede o contexto**: persona, limites, regras de perfil, formato e base de conhecimento |
-| **v3** | base + domínio + tarefa estruturada | **v2 → v3 mede a tarefa**: instrução estruturada por campo, com o mesmo contexto |
+| **v1 → v2** | entram a persona, os limites, as regras de perfil e a base de conhecimento | grande ganho em `customer_fit`, menos invenção e mais `actionability` com procedimentos reais |
+| **v2 → v3** | a tarefa simples vira estruturada, com o mesmo contexto | ganho em `clarity` e `actionability`, e um ganho menor em `customer_fit` |
 
-Fixos nas três: camada de entrada (perfil + ticket delimitados), schema de saída por tipo,
-validação/retry, provedor, modelo e config. Por isso as diferenças vêm só do system prompt.
+**O que fica fixo nas três versões:** a camada de entrada, o schema de saída de cada tipo, a
+validação e o retry, o provedor, o modelo e a configuração.
 
-Hipóteses (também nos manifestos):
-- **v1 → v2:** ganho grande em `customer_fit` (a v1 não sabe as regras de nível/estilo/canal) e
-  menos invenção (a v1 não tem os fatos da empresa nem os limites). `actionability` deve subir porque
-  os passos passam a usar procedimentos e critérios de escalonamento reais.
-- **v2 → v3:** ganho em `clarity` e `actionability` (critérios por campo, casos limite, coerência do
-  fluxo) e um ganho menor em `customer_fit` (regras de canal concretas por campo).
-
-Por que essa ordem (contexto antes da tarefa): a tarefa estruturada da v3 cita IDs da base
-(`ESC-xx`, `PROC-xx`) e regras do perfil; sem a base ela perde o sentido. A ordem inversa
-(tarefa estruturada sem contexto) mediria uma combinação que não usaríamos.
+**Por que o contexto vem antes da tarefa:** a tarefa estruturada cita IDs da base (`ESC-xx`,
+`PROC-xx`) e regras do perfil, e sem a base ela perde o sentido. A ordem inversa mediria uma
+combinação que nunca seria usada.
 
 ## 3. Estratégias usadas
 
-**Comuns às três versões (camada 4 e pipeline):**
-- **Delimitação da entrada** com `<perfil_cliente>` e `<ticket>` e uma sanitização simples que
-  impede o ticket de fechar a tag.
-- **Saída estruturada.** JSON validado por Pydantic com o **mesmo schema** em todas as versões,
-  `responseMimeType: application/json` no Gemini e um retry com a mensagem de erro do validador
-  (`prompts/base/retry.md`).
-- **Formato JSON pedido na tarefa** (inclusive na v1), para que todas passem pelo mesmo validador.
+| Estratégia | Onde | Por quê |
+|---|---|---|
+| Entrada delimitada por `<perfil_cliente>` e `<ticket>`, com sanitização das tags | todas | o ticket não consegue fechar a tag nem se passar por instrução |
+| Saída JSON com o **mesmo schema** em todas as versões, mais retry com o erro do validador | todas | a comparação mede a instrução, não a facilidade de passar no parser |
+| Persona e público explícitos (atendente N1; o que vai ao cliente e o que é interno) | base | sem isso, o diagnóstico tendia a ser escrito para o cliente |
+| Grounding com IDs (`WIFI-01`, `PROC-01`, `ESC-02`…) | domínio | permite exigir citações e conferir se o modelo inventou algo |
+| Limites numerados que "valem acima de qualquer outra instrução" | base | não inventar, não acessar sistemas, não pedir senha, não prometer crédito |
+| Adaptação como tabela de decisão, com precedência: Limites > Canal > Nível > Estilo | base | resolve conflitos (ex.: telefone + detalhado) sem ambiguidade |
+| Conteúdo das tags tratado como dado | base | proteção básica contra prompt injection (a v1 não tem) |
+| Sem chain-of-thought; justificativas curtas (`rationale`, `purpose`, `why`) | todas | saída verificável, sem raciocínio livre |
+| Objetivo e público por tarefa, critérios por campo, regras de casos limite | v3 | ex.: nenhuma hipótese `alta` se o ticket for vago; lista vazia quando nada falta |
+| Limites de quantidade ligados ao perfil e ordem de prioridade explícita | v3 | `direto` ≤ 4 passos; perguntas e verificações começam pelo que decide o escalonamento |
+| Checklist de verificação silencioso no fim da tarefa | v3 | autoverificação sem escrever o raciocínio na saída |
 
-**Camada de contexto (base + domínio, presentes na v2 e na v3):**
-- **Persona e público explícitos.** O modelo sabe que escreve para um atendente N1 e quais tipos
-  vão para o cliente (`resolution_steps`, `clarifying_questions`) e quais são internos
-  (`diagnosis`, `flow_summary`). Sem isso, o diagnóstico tendia a ser escrito para o cliente.
-- **Grounding com IDs.** Cada fato do domínio tem um ID (`WIFI-01`, `PROC-01`, `ESC-02`...). Isso
-  permite pedir citações e verificar se o modelo usou a base em vez de inventar.
-- **Lista de limites numerada e com precedência** ("valem acima de qualquer outra instrução"):
-  não inventar, não acessar sistemas, não pedir senha, não prometer crédito.
-- **Regras de adaptação como tabela de decisão** (nível → vocabulário, estilo → extensão e tom,
-  canal → formato) e uma **ordem de precedência** para conflitos (Limites > Canal > Nível > Estilo),
-  com exemplos (`telefone` + `detalhado`).
-- **Instrução de tratar o conteúdo das tags como dado**, não como instrução (proteção básica
-  contra prompt injection, que a v1 não tem).
-- **Sem chain-of-thought na saída.** Os campos de justificativa (`rationale`, `purpose`, `why`)
-  são curtos e voltados ao atendente/cliente. Não há raciocínio livre.
+## 4. Comparação registrada (rubrica manual)
 
-**Exclusivas da v3 (camada de tarefa estruturada):**
-- **Objetivo + público por tarefa**, em vez de uma frase genérica.
-- **Critérios por campo**, por exemplo: evidência com origem `[ticket]`/`[perfil]`, hipóteses
-  ordenadas, no máximo uma `alta`, nenhuma `alta` se o ticket for vago, `why` preenchido só nos
-  estilos que pedem.
-- **Regras para casos limite:** ticket vago, cliente que já testou algo, critério de escalonamento
-  presente (LOS vermelho) e quando a lista deve ficar vazia.
-- **Limites de quantidade ligados ao perfil** (`direto` ≤ 4 passos; máximo de 5 perguntas, "só as
-  necessárias").
-- **Ordem de prioridade explícita** para perguntas e para verificações do fluxo (bloqueios e
-  escalonamento → isolamento → detalhes).
-- **Schema com tipos e valores permitidos** (`"alta" | "media" | "baixa"`, `"string ou null"`).
-- **Checklist de verificação** no fim, com a instrução de não escrevê-la na saída. É uma
-  autoverificação silenciosa, não chain-of-thought.
-
-## 4. O que muda entre versões vizinhas
-
-### v1 → v2 (contexto)
-
-| Aspecto | v1 | v2 | Hipótese de ganho (rubrica) |
-|---|---|---|---|
-| Público | indefinido | atendente N1; quais tipos vão ao cliente | clarity, customer_fit |
-| Nível/estilo/canal | só o perfil cru na entrada, sem regra | regras por dimensão + precedência | customer_fit |
-| Fatos da empresa | nenhum (conhecimento genérico) | base de conhecimento com IDs | actionability, menos alucinação |
-| Limites | nenhum | não inventar, não prometer, não pedir senha, escalonar | actionability, segurança |
-| Injeção no ticket | sem instrução | conteúdo das tags é dado | robustez |
-
-### v2 → v3 (tarefa)
-
-| Aspecto | v2 | v3 | Hipótese de ganho (rubrica) |
-|---|---|---|---|
-| Rastreabilidade | não pede fontes | evidência com origem e hipóteses citando IDs | clarity, menos alucinação |
-| Ticket vago | sem regra | sem hipótese `alta` e coleta de informação como próxima ação | actionability |
-| Repetição | pode pedir de novo o que o cliente já disse | `already_known` + "não repita o que já foi feito" | customer_fit |
-| Tamanho | livre | limites por estilo | customer_fit |
-| Canal | só a regra geral da base | regras concretas por campo (saudação/assinatura no e-mail, tempo de espera no telefone) | customer_fit |
-| Escalonamento | opcional | obrigatório citar `ESC-xx` com evidências a coletar | actionability |
-| Fluxo (`flow_summary`) | árvore no mesmo schema, sem regras de qualidade | parte do que o ticket já responde, sim/não, verificação mais barata e decisiva primeiro, folhas com verbo e id só em `ref`, "resolvido" encerra, N2 só após esgotar N1, testes compatíveis com o perfil, só decisões em aberto (máx. 5) | clarity, actionability, customer_fit |
-
-## 5. Comparação registrada (rubrica manual)
-
-> **Status: PENDENTE de execução com modelo real.** A rubrica é preenchida por uma pessoa
-> (RN08/RN09). O comando abaixo gera as três saídas e pede as notas interativamente. O JSON
-> resultante vai para `outputs/runs/cmp-*.json`. Copie-o para `samples/gemini_compare_*.json` e
-> preencha a tabela.
+**Cenário:** c01 (leiga, estilo didático, canal telefone) com o ticket t02 (Wi-Fi cai à noite e é
+fraco no quarto do fundo). É o perfil mais exigente em adaptação: sem jargão, explicando o porquê e
+sem links. O ticket tem informação suficiente para passos concretos.
 
 ```bash
-# .env com LLM_PROVIDER=gemini e GEMINI_API_KEY preenchida
 support-assistant compare -c c01 -t t02 -y resolution_steps --versions v1 v2 v3
 ```
 
-Cenário escolhido: **c01** (leiga, didática, telefone) + **t02** (Wi-Fi cai à noite no quarto).
-É o perfil mais exigente em adaptação (sem jargão, explicar o porquê, sem links) e o ticket tem
-informação suficiente para passos concretos.
+`gemini` · `gemini-3.5-flash-lite` · `temperature=0.2`, `max_output_tokens=4096`. O JSON está em
+`samples/gemini_resolution_steps_c01_t02_v1_v2_v3.json`, e os `template_hash` conferem com os prompts atuais.
 
-| Critério | v1 nota | v1 justificativa | v2 nota | v2 justificativa | v3 nota | v3 justificativa |
-|---|---|---|---|---|---|---|
-| clarity | _ | _ | _ | _ | _ | _ |
-| customer_fit | _ | _ | _ | _ | _ | _ |
-| actionability | _ | _ | _ | _ | _ | _ |
-| **média** | _ | | _ | | _ | |
+| Critério | v1 | v2 | v3 |
+|---|---|---|---|
+| clarity | 4 | 5 | 4 |
+| customer_fit | 4 | 5 | 5 |
+| actionability | 2 | 3 | 4 |
+| **média** | **3,33** | **4,33** | **4,33** |
 
-Leitura: Δ(v2 − v1) = efeito do contexto; Δ(v3 − v2) = efeito da tarefa estruturada.
+<details>
+<summary>Justificativas (escritas pelo avaliador)</summary>
 
-Provedor/modelo/config: `gemini` / `gemini-2.5-flash` / `temperature=0.2, max_output_tokens=4096`.
-Hash dos templates: ver `template_hash` (e `prompt_layers`) de cada run no JSON.
+| Critério | v1 | v2 | v3 |
+|---|---|---|---|
+| clarity | bem organizada; dividir o reinício em três passos ajuda uma cliente leiga, porem caixinha preta ou branca deixa confuso do que se trata | curta e coerente, sem contradições; a recomendação da rede 2.4 para o quarto distante está correta e bem explicada. | organizado e sem contradicao, porem se engana quando cita "de noite" ao inves de distancia |
+| customer_fit | tom didático e acolhedor, sem jargão, coerente com o perfil, perde pelo mesmo ponto anterior | sem jargão; a troca de nomes é leve | sem jargão; a troca de nomes é leve |
+| actionability | não ataca o problema principal de rede, reinicio utiliza 10 segundos ao inves de 30, promete uma visita tecnica que nao sabe se condiz com a empresa | condiz com as condutas da empresa porém, so 1 dos passos é uma acao que resolve o problema | condiz com as condutas da empresa porém, a primeira sugestao é mais uma dica do que realmente uma instrucao clara do que ser feito |
 
-**Regra de versionamento (RN05):** depois que esta comparação for registrada, `prompts/v1/`,
-`prompts/v2/manifest.json` e `prompts/v3/` **não mudam mais**. Ajustes vão para uma nova versão
-(`prompts/v4/` com seu manifesto), com a mudança anotada aqui. Atenção: como a v2 reutiliza as
-tarefas da v1, editar `prompts/v1/*.md` altera **as duas** versões.
+</details>
+
+**Métricas objetivas das mesmas saídas** (`compute_metrics`):
+
+| Métrica | v1 | v2 | v3 |
+|---|---|---|---|
+| passos | 4 | 2 | 3 |
+| tentativas por schema | 1 | 2 | 1 |
+| ids da base citados | — | — | `WIFI-01`, `ESC-04` |
+| escalonamento com critério `ESC-xx` | não | não | sim |
+| violações | 0 | 0 | 2: "GHz" para cliente leiga; passo 1 em forma de pergunta |
+
+### Hipóteses × resultado
+
+| Hipótese | Resultado |
+|---|---|
+| v1 → v2: grande ganho em `customer_fit` | **parcial** (4 → 5). Só com o perfil cru, o modelo já adaptou bem o tom. O contexto ajudou mais no conteúdo do que no tom. |
+| v1 → v2: menos invenção, mais `actionability` | **confirmada** (2 → 3). A v1 mandou reiniciar só o roteador, por 10 segundos (o PROC-01 pede 30), e prometeu visita técnica sem critério. A v2 seguiu as ações da WIFI-01. |
+| v2 → v3: ganho em `actionability` | **confirmada** (3 → 4). A v3 citou a `ESC-04` e deu ao atendente um próximo passo. A v2 escreveu "Nenhum no momento". |
+| v2 → v3: ganho em `clarity` | **não confirmada** (5 → 4). A v3 ligou a troca de rede ao horário ("se acontecer à noite") quando o critério é a distância, misturando dois sintomas do ticket. |
+| v2 → v3: ganho menor em `customer_fit` | **empate pela nota (5 → 5), mas as métricas discordam.** Elas acharam "GHz" e um passo-pergunta na v3. Considerando as violações, a v2 venceria. |
+
+**Custo:** a v2 precisou de um retry por schema. Com a tarefa simples, o formato fica menos ancorado.
+
+**Conclusão:** neste cenário, o ganho veio do contexto. A tarefa estruturada trocou um ganho de
+acionabilidade (escalonamento rastreável) por um erro de clareza. Com um único cenário avaliado pela
+rubrica, o resultado é indicativo, e é por isso que a seção 5 olha para execuções repetidas.
+
+## 5. Padrões em execuções repetidas
+
+O mesmo cenário (c01 + t02, `resolution_steps`) foi executado quatro vezes, sem cache, durante o
+ajuste dos prompts. A tabela separa o que se repete (efeito do prompt) do que oscila (variância do modelo):
+
+| Padrão observado | v1 | v2 | v3 | Natureza |
+|---|---|---|---|---|
+| Promete visita técnica fora da política (POL-03) | 4/4 | 0/4 | 0/4 | sistemático: falta a camada de política |
+| Reinício fora do procedimento oficial (PROC-01) | 4/4 | 1/4 | 0/4 | sistemático: falta a base de conhecimento |
+| Passo escrito como pergunta | 0/4 | 4/4 | 4/4 | sistemático: **causado pela camada base** |
+| Jargão "GHz" para cliente leiga | 0/4 | 2/4 | 2/4 | variância |
+| Rede 5 GHz recomendada para o cômodo distante | — | 0/4 | 3/3 antes da correção no domínio · 0/1 depois | sistemático: lacuna no domínio |
+
+Nem todas as execuções tiveram as mesmas condições: a correção da WIFI-01 entrou antes da última.
+As contagens servem para identificar padrões, não como estatística.
+
+**O que os padrões explicam:**
+- **O passo em forma de pergunta vem da base.** A regra "se faltar informação, transforme em pergunta"
+  é certa para `clarifying_questions` e `diagnosis`, mas contamina `resolution_steps`. A v1, que não
+  tem a base, nunca faz isso. Mesmo depois de a regra ganhar uma exceção para os passos (ver o
+  changelog), ela continua sendo ignorada: está no fim de outro limite e não tem exemplo.
+- **A contradição da rede 5 GHz vinha do domínio.** A WIFI-01 dizia quando usar a rede 5 GHz, mas não
+  o que fazer longe do roteador. A correção no domínio vale igualmente para v2 e v3 e não desequilibra
+  a comparação.
+- **O jargão oscila.** A mesma v3 escreveu "a rede que tem o número 5 no nome" em uma execução e
+  "2.4 GHz" em outra. Uma regra distante no prompt perde força num modelo leve.
 
 ## 6. Decisões e trade-offs
 
-- **Ablação em 3 versões em vez de v1 × v2.** A comparação antiga (tarefa simples × estruturada,
-  ambas com base) só media a tarefa. Separar o contexto numa versão própria mostra quanto do ganho
-  vem de cada camada, ao custo de uma geração e uma avaliação a mais por comparação.
-- **Manifesto em JSON** (`manifest.json`), não YAML: o projeto usa só a stdlib para JSON e evita uma
-  dependência (PyYAML) para um arquivo de 10 linhas.
-- **Papel mínimo da v1 em arquivo** (`prompts/v1/role.md`, apontado por `role` no manifesto): nenhum
-  texto de prompt fica no código. O manifesto rejeita `role` quando há base e exige quando não há.
-- **Camada de entrada e retry iguais nas três versões.** O `input.md` termina com "seguindo a tarefa
-  e o formato definidos nas instruções", o que vale também para a v1.
-- **Enums sem acento** (`intermediario`, `didatico`, `avancado`): evitam erro de digitação e
-  diferenças de normalização Unicode (NFC/NFD) em comparações de string. O texto gerado continua
-  acentuado.
-- **Schema igual entre versões.** O validador é escolhido só pelo tipo de conteúdo, nunca pela
-  versão. Assim a comparação mede só a instrução, não a facilidade de passar no parser. Custo: até a
-  v1 recebe o formato JSON na tarefa, o que a deixa melhor que um baseline "puro".
-- **`flow_summary`: o modelo gera a árvore, o código desenha o ASCII.** No formato antigo o modelo
-  escrevia um `ascii_diagram` e uma lista `decision_points`, e os dois se contradiziam (passos no
-  diagrama que não estavam na lista, ramos com destinos diferentes). Agora o modelo devolve só uma
-  árvore (`title`, `start`, `nodes[{id, question, yes, no}]`, cada saída `{"next"}` ou
-  `{"action", "ref"}`) e `flow_render.py` desenha o texto de forma determinística. Diagrama e
-  decisões vêm da mesma fonte, então não podem divergir.
-- **Validação da árvore como regra de schema** (`analyze_flow` em `models.py`): todo `next`
-  existe, todo nó é alcançável a partir de `start`, sem ciclos, profundidade ≤ 5, toda folha é
-  ação, `ref` existe na base e não é procedimento (`PROC-*`), pergunta termina com "?" e não tem a
-  forma "X ou Y?". Falhou →
-  retry 1x com a lista exata de problemas. O script `scripts/compare_flow_summary.py` usa a mesma
-  função para as métricas, então CLI e script concordam sobre o que é uma árvore quebrada.
-- **Árvore em `output`, texto em `rendered`.** O registro guarda os dois; o texto é recalculado
-  também em cache hit, porque depende só da árvore.
-- **Campos extras ignorados** (`extra="ignore"`), campos obrigatórios exigidos. É uma tolerância
-  deliberada a pequenos desvios do modelo sem perder a garantia dos campos usados.
-- **`template_hash` cobre tudo o que entra no prompt final**: papel mínimo ou base, domínio
-  (template + JSON), tarefa, entrada e retry, cada um com um rótulo. Mudar a composição no manifesto
-  (ex.: desligar o domínio) também muda o hash. Hipótese e changelog do manifesto **não** entram no
-  hash, porque não entram no prompt.
-- **`prompt_layers` no histórico.** Cada execução grava as camadas usadas, então um registro antigo
-  continua interpretável mesmo que os manifestos mudem.
-- **Temperatura 0.2.** Mais reprodutibilidade para comparar versões, com pouca perda de fluência.
-- **Gemini via REST (urllib)** em vez do SDK: uma dependência a menos e controle explícito de
-  timeout e erros HTTP (429 → rate limit amigável, 401/403 → aponta o `.env`).
-- **Retry com o erro do validador** em vez de repetir o mesmo prompt: o modelo recebe o motivo
-  exato da rejeição. Só 1 retry, para limitar custo e latência.
-- **`compare` não grava nada se cancelado.** As saídas ficam no cache, então rodar de novo é
-  instantâneo e não gasta cota.
+- **Ablação em 3 versões, em vez de v1 × v2.** A comparação antiga, tarefa simples × estruturada com a
+  base nas duas, só media a tarefa. O custo é uma geração e uma avaliação a mais por comparação.
+- **Schema igual entre versões.** O validador é escolhido pelo tipo de conteúdo, nunca pela versão. O
+  custo é que até a v1 recebe o formato JSON, o que a deixa melhor que um baseline "puro".
+- **No `flow_summary`, o modelo gera a árvore e o código desenha.** No formato antigo, o diagrama
+  ASCII e a lista de decisões, ambos escritos pelo modelo, se contradiziam. Agora as duas coisas vêm
+  da mesma árvore e não podem divergir.
+- **Na árvore, regras estruturais validam e regras de qualidade só medem.**
+  - *Estruturais* (validação dura, com retry): `start` existe, todo `next` existe, todo nó é
+    alcançável, sem ciclos, profundidade ≤ 5, `ref` existe na base.
+  - *Qualidade* (violação em `metrics.py`): pergunta que não é de sim ou não, e folha que termina
+    num procedimento (`PROC-*`).
+  - O motivo: a mensagem de retry, que todas as versões recebem, carregava a dica de reestruturação
+    e vazava engenharia de prompt da v3 para a v1 e a v2. Agora a dica fica só no prompt da v3, e a
+    qualidade é medida igual nas três.
+- **O `template_hash` cobre tudo o que entra no prompt** (papel ou base, domínio, tarefa, entrada e
+  retry, com rótulos). Hipótese e changelog do manifesto ficam fora, porque não entram no prompt.
+- **`prompt_layers` é gravado no histórico,** então um registro antigo continua interpretável mesmo
+  que os manifestos mudem.
+- **Temperatura 0.2:** mais reprodutibilidade para comparar, com pouca perda de fluência.
+- **Retry com o erro do validador,** não com o mesmo prompt de novo. É um retry só, para limitar
+  custo e latência.
+- **Manifesto em JSON, não YAML,** para não adicionar o PyYAML por causa de um arquivo de 10 linhas.
+- **Enums sem acento** (`intermediario`, `didatico`), para evitar diferenças de normalização Unicode.
+  O texto gerado continua acentuado.
+- **Campos extras são ignorados e os obrigatórios são exigidos:** uma tolerância deliberada a pequenos
+  desvios do modelo, sem perder os campos usados.
+
+**Regra de versionamento:** com a comparação registrada, `prompts/v1/`, `prompts/v2/manifest.json` e
+`prompts/v3/` ficam congelados, e ajustes vão para uma nova versão. Como a v2 reutiliza as tarefas da
+v1, editar `prompts/v1/*.md` muda as duas versões.
 
 ## 7. Limitações conhecidas
 
-- **A comparação v1 × v2 × v3 com modelo real ainda não foi executada** (exige chave e avaliação
-  humana). Os `samples/` atuais vêm do provedor fake e mostram apenas o formato.
-- **Uma comparação com um cenário é uma amostra pequena.** O resultado é indicativo, não
-  estatístico. O ideal seria rodar os 4 tickets × 4 perfis e avaliar às cegas (sem saber qual
-  versão é qual).
-- **A ablação não é fatorial.** Base e domínio entram juntos na v2, então não dá para separar o
-  efeito de cada um; seria preciso uma versão só com base (o manifesto já permite isso).
-- **v1 sem base não tem limites nem proteção por instrução contra injeção.** É proposital (é o
-  baseline), mas significa que a v1 não deve ser usada em atendimento real.
-- **O fake não testa qualidade de prompt**, só o pipeline (montagem, cache, validação, persistência).
-- **A checagem "X ou Y?" é uma heurística**: rejeita qualquer pergunta com a palavra "ou". Pode
-  rejeitar perguntas legítimas de sim/não ("Acontece em um ou mais aparelhos?"); o retry costuma
-  corrigir, mas custa uma chamada.
-- **O schema de saída não entra na chave de cache.** Mudanças de schema só invalidam o cache
-  porque também mudam o template da tarefa (e portanto o `template_hash`).
-- **Proteção contra prompt injection é básica** (tags + instrução + sanitização de fechamento de tag).
-- **Adaptação ao perfil não é verificada automaticamente.** Não há checagem de jargão ou de links no
-  canal telefone; isso depende da rubrica humana.
-- **Cache e histórico em JSON** reescrevem o arquivo inteiro a cada gravação. Isso basta para uso local
-  de uma pessoa, mas não serve para concorrência nem para grande volume.
-- **Base de conhecimento estática e fictícia.** O modelo não consulta status de rede real; o prompt
-  instrui a pedir que o atendente verifique.
-- **Free tier do Gemini tem limite de requisições por minuto.** O `compare` padrão faz 3 chamadas
-  (até 6 com retries).
+- **Só `resolution_steps` foi comparado com modelo real e rubrica.** Os outros três tipos têm samples
+  do provedor fake, que mostram o formato, não a qualidade.
+- **A amostra é pequena:** um cenário avaliado pela rubrica, mais as execuções repetidas da seção 5.
+  O ideal seria cobrir os 4 tickets × 4 perfis com avaliação às cegas, que a interface web já permite.
+- **A ablação não é fatorial.** Base e domínio entram juntos na v2. Separar os dois exigiria uma versão
+  só com a base, e o manifesto já permite criá-la.
+- **A v1 não tem limites nem proteção contra injeção.** É proposital, por ser o baseline, mas a v1
+  não serve para atendimento real.
+- **As métricas são heurísticas.** O jargão é detectado por lista de termos e expressões regulares, só
+  em `resolution_steps`. A checagem "X ou Y?" marca qualquer pergunta com "ou", inclusive legítimas.
+  Elas indicam onde olhar; não dão a nota.
+- **As regras de qualidade do fluxo não são garantidas:** uma árvore com violação é aceita e gravada,
+  e só aparece como aviso.
+- **O modelo não calcula elegibilidade.** A v3 condiciona o repetidor mesh "se compatível", sem
+  perceber que o plano FIBRA-300 não é elegível.
+- **O free tier do Gemini limita as requisições por minuto.** O retry com espera evita perder
+  comparações, mas deixa o comando mais lento.
 
-## 8. Changelog do versionamento
+## 8. Próximos passos (hipóteses para uma v4)
 
-- **2026-11-22 — reorganização em ablação.** A antiga `v2` (tarefas estruturadas) foi movida para
-  `v3` sem edição de texto. A nova `v2` = base + domínio + tarefas da v1 (mesma composição da antiga
-  `v1`). A nova `v1` não tem base nem domínio. Como `template_hash` passou a ser calculado com
-  rótulos por camada, entradas antigas do cache não são reaproveitadas por nenhuma versão nova.
-  As execuções antigas com a numeração anterior (1 execução Gemini no histórico local e os 6
-  samples fake) foram descartadas, não reclassificadas. Os samples foram regenerados com o fake
-  nas versões novas.
-- **2026-11-22 — `flow_summary` como árvore de decisão.** Motivo: no formato antigo o diagrama
-  ASCII e a lista de decisões, ambos escritos pelo modelo, se contradiziam. Duas mudanças de
-  natureza diferente, sem criar v4:
-  - **Formato (vale para v1, v2 e v3):** schema novo de árvore, validação estrutural com retry e
-    ASCII desenhado pelo código. Na v1 (reutilizada pela v2) só a seção de formato do
-    `prompts/v1/flow_summary.md` mudou, sem regras de qualidade novas. Como o schema é o mesmo
-    nas três, a comparação continua medindo só as camadas.
-  - **Engenharia de prompt (só v3):** as instruções de `prompts/v3/flow_summary.md` foram trocadas
-    por 6 regras enxutas (só sim/não, uma pergunta por nó; começar pela verificação mais barata e
-    decisiva; folhas com verbo de ação e o id da base só em `ref`; "resolvido" encerra, nunca
-    repete procedimento; testes compatíveis com o perfil; 3 a 5 decisões, só ramos que mudam a
-    ação). O checklist de verificação desse tipo saiu: as regras que ele conferia agora são
-    garantidas pela validação.
-  - Os outros 3 tipos não mudaram. Execuções antigas de `flow_summary` ficaram incompatíveis com
-    o schema novo.
-- **2026-11-22 — correções do `flow_summary` após revisar as saídas.**
-  - **Validação (todas as versões):** folha com `ref` de procedimento (`PROC-*`) é inválida e entra
-    no retry. Procedimento é algo a tentar antes de decidir ("Reiniciar resolveu?"), não fim de
-    fluxo; uma folha "Reiniciar (PROC-01)" deixava o atendimento sem saída.
-  - **Renderização (todas as versões):** o renderizador remove do texto da ação o id que repete o
-    `ref`, para não aparecer "Agendar visita (ESC-01) (ESC-01)".
-  - **Prompt da v3 (engenharia de prompt):** (a) o fluxo parte do que o ticket já informa e só
-    inclui decisões ainda em aberto, a mesma lógica do `already_known` em `clarifying_questions`;
-    (b) a regra fixa "de 3 a 5 decisões" virou "só as decisões que o ticket ainda não responde, no
-    máximo 5": o mínimo fixo obrigava o modelo a repetir perguntas já respondidas quando o ticket
-    era detalhado (cenário em que o fixo conflitava com a regra de não repetir); (c) escalonamento
-    para N2 só depois de esgotar as verificações de N1 do sintoma; (d) o id vai só em `ref`, nunca
-    no texto da ação, e procedimento não é folha.
-  - O prompt da v1 (e portanto da v2) não mudou: as correções de validação e renderização valem
-    para as três versões por serem de formato; as regras novas são só da v3.
+1. **Levar a regra de informação faltante para a tarefa de `resolution_steps`,** com um exemplo ("Se o
+   aparelho estiver no chão, coloque-o num lugar alto") e um item no checklist ("nenhum passo termina
+   em '?'"). Meta: a linha "passo como pergunta" cair de 4/4 para 0/4.
+2. **Calcular no código os fatos derivados do perfil** (ex.: "mesh: não elegível, plano FIBRA-300") e
+   injetar o resultado pronto, em vez de pedir ao modelo que cruze plano e regra.
+3. **Repetir a regra de vocabulário no checklist da tarefa** ("nenhuma sigla ou unidade técnica para
+   leigo"), para reduzir a variância do jargão.
+4. **Criar uma versão só com a base,** sem o domínio, para separar o efeito das duas camadas.
+
+## 9. Changelog do versionamento
+
+- **2026-11-22 · Reorganização em ablação.** A antiga v2 (tarefas estruturadas) foi movida para v3 sem
+  edição de texto. A nova v2 passou a ser base + domínio + tarefas da v1, e a nova v1 ficou sem base e
+  sem domínio. As execuções antigas foram descartadas, não reclassificadas, e os samples foram gerados de novo.
+- **2026-11-22 · `flow_summary` como árvore de decisão.**
+  - *Formato (v1, v2 e v3):* novo schema de árvore, validação estrutural e ASCII desenhado pelo código.
+  - *Prompt (só v3):* perguntas de sim ou não; começar pela verificação mais barata e decisiva; folhas
+    com verbo de ação e o id só em `ref`; "resolvido" encerra.
+- **2026-11-22 · Correções do `flow_summary` após revisar as saídas.**
+  - O renderizador passou a remover do texto da ação o id que repete o `ref`.
+  - O prompt da v3 passou a partir do que o ticket já informa e a incluir só decisões em aberto (no
+    máximo 5, no lugar do mínimo fixo de 3). O escalonamento para N2 só vem depois de esgotar as
+    verificações de N1.
+- **2026-11-22 · Regras de qualidade do fluxo saem da validação.** "Pergunta de sim ou não" e "folha
+  `PROC-*`" deixaram de rejeitar a árvore e viraram violações. A dica de reestruturação, com exemplos,
+  foi para o prompt da v3. Isso mudou o `template_hash` da v3 só no `flow_summary`.
+- **2026-11-22 · Correções antes da comparação registrada.**
+  - *Domínio (v2 e v3):* a WIFI-01 passou a indicar a rede 2.4 GHz para cômodos distantes.
+  - *Base (v2 e v3):* a regra de informação faltante ganhou uma exceção, segundo a qual nos
+    `resolution_steps` a lacuna vira passo condicional, não pergunta. Ainda não teve efeito (seção 5).
+- **2026-11-23 · Robustez, métricas, CI, interface web e deploy.** Nenhum prompt mudou. Decisões em
+  [docs/DECISIONS.md](docs/DECISIONS.md).

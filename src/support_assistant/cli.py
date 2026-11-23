@@ -13,7 +13,6 @@ import argparse
 import logging
 import sys
 
-from support_assistant.cache import JsonCache
 from support_assistant.config import ConfigError, Settings, load_settings
 from support_assistant.evaluation import (
     RUBRIC_CRITERIA,
@@ -25,8 +24,9 @@ from support_assistant.evaluation import (
     validate_justification,
     validate_score,
 )
-from support_assistant.generators import GenerationError, Generator
+from support_assistant.generators import GenerationError, Generator, build_generator
 from support_assistant.llm_client import LLMError, create_client
+from support_assistant.metrics import VIOLATION_RULES
 from support_assistant.models import (
     CONTENT_TYPES,
     CustomerProfile,
@@ -37,7 +37,6 @@ from support_assistant.models import (
     validate_content_type,
 )
 from support_assistant.prompt_builder import build_prompt, list_content_types, list_versions, load_manifest
-from support_assistant.storage import Storage
 
 LINE = "─" * 72
 
@@ -66,13 +65,8 @@ def resolve_ticket(settings: Settings, ticket_id: str | None, ticket_text: str |
 
 
 def make_generator(settings: Settings) -> Generator:
-    client = create_client(settings)
-    return Generator(
-        settings=settings,
-        client=client,
-        cache=JsonCache(settings.output_dir / "cache.json"),
-        storage=Storage(settings.output_dir),
-    )
+    # `create_client` passado explicitamente: os testes trocam `cli.create_client` por um cliente simulado.
+    return build_generator(settings, client=create_client(settings))
 
 
 # ---------------------------------------------------------------------------
@@ -133,11 +127,72 @@ def print_run(record: dict) -> None:
         f"{record['provider']}/{record['model']}"
     )
     print(f"camadas: {describe_layers(record['prompt_layers'])}")
-    print(f"cache: {cache_flag} | tentativas: {record['attempts']} | latência: {record['latency_ms']} ms")
+    retries = record.get("provider_retries", 0)
+    retries_info = f" | repetições do provedor: {retries}" if retries else ""
+    print(
+        f"cache: {cache_flag} | tentativas: {record['attempts']}{retries_info} | "
+        f"latência: {record['latency_ms']} ms"
+    )
     print(LINE)
     # flow_summary: mostra a árvore desenhada pelo código (flow_render.py), guardada em `rendered`.
     print(record.get("rendered") or render_output(record["content_type"], record["output"]))
+    print_violations(record)
     print(LINE)
+
+
+def print_violations(record: dict) -> None:
+    """Regras de qualidade dependentes do perfil (metrics.py): avisam, não bloqueiam."""
+    if record.get("metrics_error"):
+        print(LINE)
+        print(f"Métricas indisponíveis: {record['metrics_error']}")
+        return
+    violations = (record.get("metrics") or {}).get("violations") or []
+    if violations:
+        print(LINE)
+        print(f"Avisos de qualidade ({len(violations)}):")
+        for v in violations:
+            print(f"  - [{v['rule']}] {v['where']}: {VIOLATION_RULES.get(v['rule'], v['rule'])} ({v['detail']})")
+
+
+def _fmt_metric(value) -> str:
+    if isinstance(value, bool):
+        return "sim" if value else "não"
+    if isinstance(value, dict):
+        return " ".join(f"{k}:{v}" for k, v in value.items())
+    if isinstance(value, list):
+        return ",".join(map(str, value)) or "-"
+    return str(value)
+
+
+def print_metrics_table(runs: list[dict]) -> None:
+    """Tabela compacta: uma linha por métrica, uma coluna por versão, depois as violações."""
+    print(LINE)
+    print("Métricas objetivas (calculadas pelo código; não substituem a sua avaliação):")
+    keys: list[str] = []
+    for run in runs:
+        for key in run.get("metrics") or {}:
+            if key not in keys and key not in ("violations", "n_violations"):
+                keys.append(key)
+    keys.append("n_violations")
+    headers = ["métrica", *(run["prompt_version"] for run in runs)]
+    rows = [
+        [key, *(_fmt_metric((run.get("metrics") or {}).get(key, "erro")) for run in runs)]
+        for key in keys
+    ]
+    widths = [max(len(h), *(len(r[i]) for r in rows)) for i, h in enumerate(headers)]
+    print("  " + "  ".join(h.ljust(w) for h, w in zip(headers, widths)))
+    for row in rows:
+        print("  " + "  ".join(c.ljust(w) for c, w in zip(row, widths)))
+    print("Violações:")
+    for run in runs:
+        if run.get("metrics_error"):
+            print(f"  {run['prompt_version']}: métricas indisponíveis ({run['metrics_error']})")
+            continue
+        violations = (run.get("metrics") or {}).get("violations") or []
+        if not violations:
+            print(f"  {run['prompt_version']}: nenhuma")
+        for v in violations:
+            print(f"  {run['prompt_version']}: [{v['rule']}] {v['where']}: {v['detail']}")
 
 
 # ---------------------------------------------------------------------------
@@ -227,6 +282,7 @@ def cmd_compare(args: argparse.Namespace, settings: Settings) -> int:
 
     for run in runs:
         print_run(run)
+    print_metrics_table(runs)  # antes das notas: métricas ao lado da rubrica, gravadas juntas
 
     print("\nAgora avalie cada versão. (Ctrl+C cancela sem gravar a comparação; as saídas ficam no cache.)")
     for run in runs:
@@ -300,7 +356,8 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.WARNING,
-        format="[%(levelname)s] %(message)s",
+        # nome do módulo no aviso: distingue retry do provedor (llm_client) de retry por schema (generators)
+        format="[%(levelname)s] %(name)s: %(message)s",
     )
     try:
         settings = load_settings()

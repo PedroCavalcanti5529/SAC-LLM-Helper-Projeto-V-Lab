@@ -1,0 +1,6 @@
+# Dependências do deploy no Streamlit Community Cloud (o Cloud lê primeiro o requirements.txt da
+# pasta do arquivo de entrada). O pacote support_assistant não é instalado lá: o app acrescenta
+# src/ ao sys.path. Localmente, prefira `pip install -e ".[web]"`.
+streamlit>=1.37
+pydantic>=2.6
+python-dotenv>=1.0

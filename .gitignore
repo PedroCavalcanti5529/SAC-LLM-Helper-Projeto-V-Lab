@@ -8,3 +8,4 @@ outputs/
 build/
 dist/
 samples.zip
+.claude

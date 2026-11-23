@@ -9,11 +9,15 @@ você entrega só a árvore.
 1. Parta do que já se sabe. Antes de montar a árvore, veja o que o ticket e o perfil já informam.
    Não pergunte de novo o que já foi respondido: use a resposta para escolher o caminho.
 2. Só perguntas de sim ou não, uma por nó. Termine com "?" e nunca use a forma "X ou Y?".
+   Se a dúvida tem duas alternativas, pergunte por uma delas e deixe a outra no "não":
+   em vez de "Funciona no cabo ou só no Wi-Fi?", use "Funciona no cabo de rede?".
 3. Comece pela verificação mais barata e mais decisiva que ainda está em aberto (ex.: um sinal de
    escalonamento alto).
 4. Cada folha é uma ação final com verbo explícito ("Escalar para outro estado").
    O id da base de conhecimento vai **só** no campo `ref`, nunca no texto de `action`.
-   Procedimento (`PROC-xx`) não é folha: vira uma decisão ("Acao resolveu o problema?").
+   Procedimento (`PROC-xx`) não é folha: vira uma decisão sobre o resultado dele.
+   Em vez da folha `{"action": "Reiniciar ONT e roteador", "ref": "PROC-01"}`, crie o nó
+   "Reiniciar a ONT e o roteador resolveu?" com `yes` → encerrar e `no` → próxima verificação.
 5. "Resolvido" leva a encerrar ("Encerrar atendimento", `ref: null`), nunca a repetir um procedimento.
 6. Escalonamento para N2 só depois de esgotar as verificações de N1 para este sintoma
    (as `customer_checks` e os procedimentos da base que ainda não foram feitos).

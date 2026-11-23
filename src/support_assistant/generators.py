@@ -22,6 +22,8 @@ from pydantic import ValidationError
 from support_assistant.cache import JsonCache, make_cache_key
 from support_assistant.config import Settings
 from support_assistant.flow_render import render_flow
+from support_assistant.llm_client import create_client
+from support_assistant.metrics import compute_metrics
 from support_assistant.models import (
     OUTPUT_SCHEMAS,
     CustomerProfile,
@@ -85,6 +87,20 @@ def parse_output(raw: str, content_type: str, kb_ids: set[str] | None = None) ->
     return model.model_dump()
 
 
+def build_generator(settings: Settings, client=None) -> "Generator":
+    """Monta o Generator a partir das configurações. Usado pela CLI e pela interface web.
+
+    `client` permite injetar outro cliente de LLM (ex.: um provedor escolhido por sessão no
+    deploy); sem ele, o provedor vem de `settings`.
+    """
+    return Generator(
+        settings=settings,
+        client=client if client is not None else create_client(settings),
+        cache=JsonCache(settings.output_dir / "cache.json"),
+        storage=Storage(settings.output_dir),
+    )
+
+
 class Generator:
     """Junta as dependências (settings, cliente, cache, storage) para gerar conteúdo."""
 
@@ -137,10 +153,12 @@ class Generator:
             "config": config,
             "cache_key": cache_key,
             "cached": False,
-            "attempts": 0,
+            "attempts": 0,  # tentativas por schema (1 ou 2)
+            "provider_retries": 0,  # repetições por falha temporária do provedor (fora da chave de cache)
             "latency_ms": 0,
             "output": None,
-            "evaluation": None,
+            "metrics": None,  # objetivas, calculadas pelo código (metrics.py)
+            "evaluation": None,  # rubrica humana (só em comparação)
         }
 
         hit = self.cache.get(cache_key)
@@ -162,19 +180,37 @@ class Generator:
 
         if content_type in RENDERERS:  # texto desenhado pelo código, separado da árvore em `output`
             record["rendered"] = RENDERERS[content_type](record["output"])
+        self._attach_metrics(record, content_type, customer)
 
         if persist:
             record["run_path"] = str(self.storage.save_run(record))
         return record
 
-    def _call_with_retry(self, system: str, user: str, content_type: str, record: dict) -> tuple[dict, int]:
+    @staticmethod
+    def _attach_metrics(record: dict, content_type: str, customer: CustomerProfile) -> None:
+        """Métricas + violações dependentes do perfil. Recalculadas também em cache hit
+        (dependem só da saída e do perfil). Falha no cálculo nunca derruba a execução."""
+        try:
+            record["metrics"] = compute_metrics(content_type, record["output"], customer)
+        except Exception as exc:  # noqa: BLE001 - métrica é acessória: registra e segue
+            logger.warning("Falha ao calcular métricas (%s): %s", content_type, exc)
+            record["metrics"] = None
+            record["metrics_error"] = f"{type(exc).__name__}: {exc}"
+
+    def _complete(self, system: str, user: str, content_type: str, record: dict) -> str:
+        """Chama o LLM e soma as repetições por falha do provedor (retry de transporte, no llm_client)."""
         raw = self.client.complete(system, user, content_type)
+        record["provider_retries"] += getattr(self.client, "last_provider_retries", 0)
+        return raw
+
+    def _call_with_retry(self, system: str, user: str, content_type: str, record: dict) -> tuple[dict, int]:
+        raw = self._complete(system, user, content_type, record)
         try:
             return parse_output(raw, content_type, self.kb_ids), 1
         except OutputValidationError as first_error:
-            logger.warning("Resposta inválida na 1ª tentativa: %s", first_error)
+            logger.warning("Resposta fora do schema na 1ª tentativa (retry por schema): %s", first_error)
             retry_user = user + "\n\n" + build_retry_message(self.settings.prompts_dir, str(first_error))
-            raw_retry = self.client.complete(system, retry_user, content_type)
+            raw_retry = self._complete(system, retry_user, content_type, record)
             try:
                 return parse_output(raw_retry, content_type, self.kb_ids), 2
             except OutputValidationError as second_error:

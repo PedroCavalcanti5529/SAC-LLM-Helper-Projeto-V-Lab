@@ -39,7 +39,7 @@
       "symptom": "Wi-Fi fraco ou caindo em cômodos distantes do roteador; normal perto dele.",
       "likely_causes": ["Distância/paredes", "Roteador em local fechado ou no chão", "Interferência na faixa 2.4 GHz (micro-ondas, redes vizinhas)"],
       "customer_checks": ["Testar perto do roteador", "Verificar se o roteador está em local alto, central e aberto"],
-      "agent_actions": ["Orientar reposicionamento", "Sugerir uso da rede 5 GHz quando perto", "Oferecer repetidor mesh NV-MESH1 (plano FIBRA-600 ou superior; cobrança conforme tabela comercial, que o assistente não conhece)"]
+      "agent_actions": ["Orientar reposicionamento", "Sugerir uso da rede 2.4 GHz quando longe", "Oferecer repetidor mesh NV-MESH1 (plano FIBRA-600 ou superior; cobrança conforme tabela comercial, que o assistente não conhece)"]
     },
     {
       "id": "WIFI-02",
