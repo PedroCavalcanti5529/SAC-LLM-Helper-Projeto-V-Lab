@@ -10,7 +10,7 @@ perfil de cada cliente, com prompts versionados e comparados de forma controlada
 Python · Gemini · Pydantic · Streamlit · pytest
  
 ![Comparação às cegas na interface web](docs/screenshots/03-comparar-cegas.png)
- 
+![Comparação às cegas na interface web](docs/screenshots/rubrica.png)
 _Comparação às cegas: as três versões de prompt aparecem como Resposta A, B e C. A versão real só
 é revelada depois que a rubrica é gravada._
  
@@ -104,6 +104,8 @@ Sem internet com luz LOS vermelha piscando
 ```
  
 ### Interface web
+
+![Pagina Inicial](docs/screenshots/compare_page.png)
  
 ```bash
 pip install -e ".[web]"
