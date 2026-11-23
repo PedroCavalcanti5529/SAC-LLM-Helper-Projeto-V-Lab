@@ -128,7 +128,62 @@ support-assistant compare -c c01 -t t02 -y resolution_steps --versions v1 v2 v3
 Leitura: Δ(v2 − v1) = efeito do contexto; Δ(v3 − v2) = efeito da tarefa estruturada.
 
 Provedor/modelo/config: `gemini` / `gemini-3.5-flash-lite` / `temperature=0.2, max_output_tokens=4096`.
-Hash dos templates: ver `template_hash` (e `prompt_layers`) de cada run no JSON.
+Hash dos templates: ver `template_hash` (e `prompt_layers`) de cada run no JSON. Os três hashes
+conferem com os prompts atuais: a comparação vale para o estado do repositório.
+
+**Métricas objetivas das mesmas saídas** (`compute_metrics`, calculadas depois sobre o JSON gravado):
+
+| Métrica | v1 | v2 | v3 |
+|---|---|---|---|
+| passos | 4 | 2 | 3 |
+| tentativas por schema (`attempts`) | 1 | 2 | 1 |
+| ids da base citados | nenhum | nenhum | `WIFI-01`, `ESC-04` |
+| escalonamento com critério `ESC-xx` | não | não | sim |
+| violações | 0 | 0 | 2: "GHz" para cliente leiga; passo 1 em forma de pergunta |
+
+### Por que a v2 é melhor que a v1 (efeito do contexto, +1,0)
+
+- **Grounding.** Sem a base de conhecimento, a v1 tratou o caso como problema genérico: mandou
+  reiniciar o roteador (que não é a ação de `WIFI-01`), contando "até dez" quando `PROC-01` manda
+  esperar 30 segundos, e prometeu visita técnica sem nenhum critério de escalonamento. A v2 usou
+  exatamente as ações de `WIFI-01`: conferir onde está o aparelho e usar a rede 2.4 GHz no cômodo
+  distante. Daí o maior salto, em `actionability` (2 → 3).
+- **Vocabulário.** A v1 descreveu o equipamento como "caixinha preta ou branca", o que confunde. A
+  regra de nível da base ("nomeie as coisas pelo que o cliente vê") produziu referências mais
+  claras na v2 (`clarity` 4 → 5).
+- **`customer_fit` subiu menos que o previsto** (4 → 5). Só com o perfil cru na entrada, o modelo
+  já adaptou bem o tom para uma cliente leiga e didática. A hipótese do manifesto ("ganho grande em
+  customer_fit") se confirmou só em parte: o contexto ajudou mais na correção do conteúdo do que no
+  tom.
+- **Custo.** A v2 precisou de um retry por schema. Com a tarefa simples, o formato fica menos
+  ancorado que na v3, que veio válida na primeira tentativa.
+
+### Por que v3 e v2 empataram (efeito da tarefa estruturada, 0,0)
+
+- **Ganho em `actionability` (3 → 4).** A tarefa estruturada exige uma nota de escalonamento que
+  cite o critério e o que fazer antes de escalar. A v3 citou `ESC-04` e condicionou a oferta do
+  repetidor mesh, como manda `WIFI-01`. A v2 escreveu "Nenhum no momento", e o atendente ficou sem
+  próximo passo se as dicas não resolvessem.
+- **Perda em `clarity` (5 → 4).** O passo 3 da v3 ligou a troca de rede a "se o problema acontecer
+  à noite", quando o critério é a distância. O modelo misturou dois sintomas do ticket. A v2, mais
+  curta, não cometeu o erro.
+- **As métricas apontam o que a nota humana deixou passar.** A rubrica deu `customer_fit` 5 à v3
+  ("sem jargão"), mas `metrics.py` encontrou "GHz" num texto para cliente leiga e um passo
+  escrito como pergunta. Considerando essas violações, a v3 ficaria abaixo de 5 em `customer_fit`
+  e a v2 venceria. É um bom exemplo do papel das métricas: elas não dão a nota, mas são uma segunda
+  leitura que pega o que o avaliador não vê. A avaliação às cegas da interface web reduz outro viés,
+  o de saber qual versão "deveria" ganhar.
+- **Uma regra da base não foi seguida por nenhuma das duas.** O limite 2 manda transformar
+  informação faltante em passo condicional nos `resolution_steps`. As duas versões começaram
+  perguntando onde fica o roteador: a v2 com "me diga se…", a v3 com "a senhora poderia
+  verificar…?". A regra está escrita como exceção no fim de outro limite e não tem exemplo. É a
+  principal hipótese para uma v4: levar a regra para a tarefa de `resolution_steps`, com um exemplo
+  ("Se o aparelho estiver no chão, coloque-o num lugar alto").
+
+**Conclusão.** Neste cenário, o ganho veio do contexto (base + domínio). A tarefa estruturada trocou
+um ganho de acionabilidade (escalonamento rastreável) por um erro de clareza. A hipótese v2 → v3 se
+confirmou em `actionability`, não em `clarity`. Com um cenário, uma execução e temperatura 0.2, não
+dá para separar o efeito do prompt da variação do modelo (ver seção 7).
 
 **Regra de versionamento (RN05):** depois que esta comparação for registrada, `prompts/v1/`,
 `prompts/v2/manifest.json` e `prompts/v3/` **não mudam mais**. Ajustes vão para uma nova versão
@@ -190,8 +245,10 @@ tarefas da v1, editar `prompts/v1/*.md` altera **as duas** versões.
 
 ## 7. Limitações conhecidas
 
-- **A comparação v1 × v2 × v3 com modelo real ainda não foi executada** (exige chave e avaliação
-  humana). Os `samples/` atuais vêm do provedor fake e mostram apenas o formato.
+- **Só um tipo foi comparado com modelo real.** A comparação v1 × v2 × v3 com o Gemini cobre apenas
+  `resolution_steps` (c01 + t02, seção 5; JSON em
+  `samples/gemini_resolution_steps_c01_t02_v1_v2_v3.json`). Os outros três tipos só têm samples do
+  provedor fake, que mostram o formato, não a qualidade.
 - **Uma comparação com um cenário é uma amostra pequena.** O resultado é indicativo, não
   estatístico. O ideal seria rodar os 4 tickets × 4 perfis e avaliar às cegas (sem saber qual
   versão é qual).
@@ -210,14 +267,18 @@ tarefas da v1, editar `prompts/v1/*.md` altera **as duas** versões.
 - **O schema de saída não entra na chave de cache.** Mudanças de schema só invalidam o cache
   porque também mudam o template da tarefa (e portanto o `template_hash`).
 - **Proteção contra prompt injection é básica** (tags + instrução + sanitização de fechamento de tag).
-- **Adaptação ao perfil não é verificada automaticamente.** Não há checagem de jargão ou de links no
-  canal telefone; isso depende da rubrica humana.
+- **A verificação automática de adaptação ao perfil é parcial.** `metrics.py` aponta jargão para
+  cliente leigo e URL/IP/comando no canal telefone, mas só em `resolution_steps`, por lista fixa de
+  termos e expressões regulares (pode haver falso positivo e negativo). As violações são avisos,
+  não rejeitam a saída. Estilo, tom e adequação ao canal além disso dependem da rubrica humana.
 - **Cache e histórico em JSON** reescrevem o arquivo inteiro a cada gravação. Isso basta para uso local
   de uma pessoa, mas não serve para concorrência nem para grande volume.
 - **Base de conhecimento estática e fictícia.** O modelo não consulta status de rede real; o prompt
   instrui a pedir que o atendente verifique.
 - **Free tier do Gemini tem limite de requisições por minuto.** O `compare` padrão faz 3 chamadas
-  (até 6 com retries).
+  (até 6 com o retry por schema). Em 429/5xx o cliente ainda repete até `LLM_MAX_RETRIES` vezes por
+  chamada, com espera crescente ou o `Retry-After` do servidor. Isso deixa o comando mais lento, mas
+  evita perder a comparação por uma falha temporária.
 
 ## 8. Changelog do versionamento
 

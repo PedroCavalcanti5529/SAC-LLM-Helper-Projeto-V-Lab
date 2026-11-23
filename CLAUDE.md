@@ -48,7 +48,6 @@ support-prompt-assistant/
 │ ├── evaluation.py # rubrica (validação + I/O)
 │ └── cli.py
 ├── tests/ # cache hit, e2e fake, prompt builder, flow_summary
-├── scripts/ # compare_*.py: métricas objetivas por versão (flow reaproveita a validação)
 └── samples/
 ```
 
