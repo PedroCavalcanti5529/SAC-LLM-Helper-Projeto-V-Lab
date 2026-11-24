@@ -1,0 +1,256 @@
+[
+  {
+    "kind": "generation",
+    "run_id": "20261123-210038-e5e49b",
+    "timestamp": "2026-11-23T21:00:38-03:00",
+    "customer_id": "c02",
+    "customer_profile": {
+      "id": "c02",
+      "name": "Rafael Souza",
+      "technical_level": "intermediario",
+      "communication_style": "direto",
+      "channel": "chat",
+      "plan": "FIBRA-600",
+      "notes": "Trabalha em home office. Já reiniciou o roteador antes de abrir chamado em atendimentos anteriores."
+    },
+    "ticket": {
+      "id": "t04",
+      "text": "A internet ficou fora o dia todo, a luz vermelha da caixinha da fibra está acesa e piscando. Já tirei da tomada e nada."
+    },
+    "content_type": "flow_summary",
+    "prompt_version": "v1",
+    "prompt_layers": {
+      "base": false,
+      "domain": false,
+      "tasks": "v1",
+      "role": "v1/role.md"
+    },
+    "template_hash": "9c152a68b8392eaef4f0389c41043f67c6c7cc1e74a70ab4b1cfbddb4c8aba43",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash-lite",
+    "config": {
+      "temperature": 0.2,
+      "max_output_tokens": 4096
+    },
+    "cache_key": "a6cced22ebb5e9ee9068fbeca0a556beeb702b7cd134c7c9c79a27d184deea30",
+    "cached": false,
+    "attempts": 2,
+    "provider_retries": 0,
+    "latency_ms": 4165,
+    "output": {
+      "title": "Fluxo de Atendimento - Luz vermelha piscando na ONT",
+      "start": "D1",
+      "nodes": [
+        {
+          "id": "D1",
+          "question": "A luz vermelha LOS da caixinha da fibra está acesa e piscando",
+          "yes": {
+            "action": "Abrir chamado técnico externo por rompimento ou perda de sinal de fibra",
+            "ref": null
+          },
+          "no": {
+            "next": "D2"
+          }
+        },
+        {
+          "id": "D2",
+          "question": "O cliente já reiniciou o equipamento da tomada",
+          "yes": {
+            "action": "Encaminhar para suporte avançado",
+            "ref": null
+          },
+          "no": {
+            "action": "Orientar o cliente a reiniciar o roteador e aguardar 5 minutos",
+            "ref": null
+          }
+        }
+      ]
+    },
+    "metrics": {
+      "decisions": 2,
+      "depth": 2,
+      "leaves": 3,
+      "leaves_with_ref": 0,
+      "kb_ids": [],
+      "escalation": false,
+      "violations": [
+        {
+          "rule": "question_not_yes_no",
+          "where": "D1",
+          "detail": "A luz vermelha LOS da caixinha da fibra está acesa e piscando"
+        },
+        {
+          "rule": "question_not_yes_no",
+          "where": "D2",
+          "detail": "O cliente já reiniciou o equipamento da tomada"
+        }
+      ],
+      "n_violations": 2
+    },
+    "evaluation": null,
+    "rendered": "Fluxo de Atendimento - Luz vermelha piscando na ONT\n\n[D1] A luz vermelha LOS da caixinha da fibra está acesa e piscando\n├─ SIM → Abrir chamado técnico externo por rompimento ou perda de sinal de fibra. FIM\n└─ NÃO → [D2] O cliente já reiniciou o equipamento da tomada\n   ├─ SIM → Encaminhar para suporte avançado. FIM\n   └─ NÃO → Orientar o cliente a reiniciar o roteador e aguardar 5 minutos. FIM"
+  },
+  {
+    "kind": "generation",
+    "run_id": "20261123-210042-6945dc",
+    "timestamp": "2026-11-23T21:00:42-03:00",
+    "customer_id": "c02",
+    "customer_profile": {
+      "id": "c02",
+      "name": "Rafael Souza",
+      "technical_level": "intermediario",
+      "communication_style": "direto",
+      "channel": "chat",
+      "plan": "FIBRA-600",
+      "notes": "Trabalha em home office. Já reiniciou o roteador antes de abrir chamado em atendimentos anteriores."
+    },
+    "ticket": {
+      "id": "t04",
+      "text": "A internet ficou fora o dia todo, a luz vermelha da caixinha da fibra está acesa e piscando. Já tirei da tomada e nada."
+    },
+    "content_type": "flow_summary",
+    "prompt_version": "v2",
+    "prompt_layers": {
+      "base": true,
+      "domain": true,
+      "tasks": "v1",
+      "role": null
+    },
+    "template_hash": "0624f654e124263ea8de29c098c3d34f87a971de586ec2fcf4d7aaf5f06020a9",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash-lite",
+    "config": {
+      "temperature": 0.2,
+      "max_output_tokens": 4096
+    },
+    "cache_key": "2779049472bda4a7f16fa16d15c355e4dfb1096e4e5b3b4e8ccb7de0eca0937a",
+    "cached": false,
+    "attempts": 1,
+    "provider_retries": 1,
+    "latency_ms": 5146,
+    "output": {
+      "title": "Fluxo de Atendimento - Sem Internet com LED LOS Vermelho",
+      "start": "D1",
+      "nodes": [
+        {
+          "id": "D1",
+          "question": "O LED LOS da ONT está vermelho (fixo ou piscando)?",
+          "yes": {
+            "next": "D2"
+          },
+          "no": {
+            "action": "Seguir para fluxos de roteador travado, Wi-Fi ou velocidade",
+            "ref": "NET-01"
+          }
+        },
+        {
+          "id": "D2",
+          "question": "O LED LOS vermelho indica sem sinal óptico, que não se resolve reiniciando. Há falha massiva registrada no painel de status interno?",
+          "yes": {
+            "action": "Informar a ocorrência da falha massiva ao cliente e aguardar normalização (ESC-03)",
+            "ref": "ESC-03"
+          },
+          "no": {
+            "action": "Agendar visita técnica no sistema com prazo de até 48 horas úteis, sem custo (POL-03, ESC-01)",
+            "ref": "ESC-01"
+          }
+        }
+      ]
+    },
+    "metrics": {
+      "decisions": 2,
+      "depth": 2,
+      "leaves": 3,
+      "leaves_with_ref": 3,
+      "kb_ids": [
+        "ESC-01",
+        "ESC-03",
+        "NET-01",
+        "POL-03"
+      ],
+      "escalation": true,
+      "violations": [
+        {
+          "rule": "question_not_yes_no",
+          "where": "D1",
+          "detail": "O LED LOS da ONT está vermelho (fixo ou piscando)?"
+        }
+      ],
+      "n_violations": 1
+    },
+    "evaluation": null,
+    "rendered": "Fluxo de Atendimento - Sem Internet com LED LOS Vermelho\n\n[D1] O LED LOS da ONT está vermelho (fixo ou piscando)?\n├─ SIM → [D2] O LED LOS vermelho indica sem sinal óptico, que não se resolve reiniciando. Há falha massiva registrada no painel de status interno?\n│  ├─ SIM → Informar a ocorrência da falha massiva ao cliente e aguardar normalização (ESC-03). FIM\n│  └─ NÃO → Agendar visita técnica no sistema com prazo de até 48 horas úteis, sem custo (POL-03) (ESC-01). FIM\n└─ NÃO → Seguir para fluxos de roteador travado, Wi-Fi ou velocidade (NET-01). FIM"
+  },
+  {
+    "kind": "generation",
+    "run_id": "20261123-210048-2288d0",
+    "timestamp": "2026-11-23T21:00:48-03:00",
+    "customer_id": "c02",
+    "customer_profile": {
+      "id": "c02",
+      "name": "Rafael Souza",
+      "technical_level": "intermediario",
+      "communication_style": "direto",
+      "channel": "chat",
+      "plan": "FIBRA-600",
+      "notes": "Trabalha em home office. Já reiniciou o roteador antes de abrir chamado em atendimentos anteriores."
+    },
+    "ticket": {
+      "id": "t04",
+      "text": "A internet ficou fora o dia todo, a luz vermelha da caixinha da fibra está acesa e piscando. Já tirei da tomada e nada."
+    },
+    "content_type": "flow_summary",
+    "prompt_version": "v3",
+    "prompt_layers": {
+      "base": true,
+      "domain": true,
+      "tasks": "v3",
+      "role": null
+    },
+    "template_hash": "dd3de0bcb18b4116c13ffe34835e4896fc6317138e54c9ed8ee59b90c5892030",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash-lite",
+    "config": {
+      "temperature": 0.2,
+      "max_output_tokens": 4096
+    },
+    "cache_key": "b1166a7cd66f526d0c6e29436c9874be67eca27edd744752e67e781c9a836442",
+    "cached": false,
+    "attempts": 1,
+    "provider_retries": 1,
+    "latency_ms": 5618,
+    "output": {
+      "title": "Diagnóstico de perda de sinal óptico",
+      "start": "D1",
+      "nodes": [
+        {
+          "id": "D1",
+          "question": "A luz LOS da caixinha da fibra continua vermelha?",
+          "yes": {
+            "action": "Escalar para visita técnica",
+            "ref": "ESC-01"
+          },
+          "no": {
+            "action": "Verificar painel de status e cadastrar chamado",
+            "ref": "NET-01"
+          }
+        }
+      ]
+    },
+    "metrics": {
+      "decisions": 1,
+      "depth": 1,
+      "leaves": 2,
+      "leaves_with_ref": 2,
+      "kb_ids": [
+        "ESC-01",
+        "NET-01"
+      ],
+      "escalation": true,
+      "violations": [],
+      "n_violations": 0
+    },
+    "evaluation": null,
+    "rendered": "Diagnóstico de perda de sinal óptico\n\n[D1] A luz LOS da caixinha da fibra continua vermelha?\n├─ SIM → Escalar para visita técnica (ESC-01). FIM\n└─ NÃO → Verificar painel de status e cadastrar chamado (NET-01). FIM"
+  }
+]

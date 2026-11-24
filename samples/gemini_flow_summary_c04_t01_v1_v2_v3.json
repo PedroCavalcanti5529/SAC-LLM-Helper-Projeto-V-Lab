@@ -1,0 +1,302 @@
+[
+  {
+    "kind": "generation",
+    "run_id": "20261123-210032-f77f05",
+    "timestamp": "2026-11-23T21:00:32-03:00",
+    "customer_id": "c04",
+    "customer_profile": {
+      "id": "c04",
+      "name": "Antônio Ferreira",
+      "technical_level": "leigo",
+      "communication_style": "direto",
+      "channel": "chat",
+      "plan": "FIBRA-300",
+      "notes": "Dono de uma pequena padaria; a maquininha de cartão usa o Wi-Fi."
+    },
+    "ticket": {
+      "id": "t01",
+      "text": "minha internet não tá boa, resolve aí por favor"
+    },
+    "content_type": "flow_summary",
+    "prompt_version": "v1",
+    "prompt_layers": {
+      "base": false,
+      "domain": false,
+      "tasks": "v1",
+      "role": "v1/role.md"
+    },
+    "template_hash": "9c152a68b8392eaef4f0389c41043f67c6c7cc1e74a70ab4b1cfbddb4c8aba43",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash-lite",
+    "config": {
+      "temperature": 0.2,
+      "max_output_tokens": 4096
+    },
+    "cache_key": "8cfec5e7db906c3e7a7b638056377f31b333a566f57ed35930cd04703c0963e7",
+    "cached": false,
+    "attempts": 1,
+    "provider_retries": 0,
+    "latency_ms": 2224,
+    "output": {
+      "title": "Fluxo de Suporte para Conexão Instável",
+      "start": "D1",
+      "nodes": [
+        {
+          "id": "D1",
+          "question": "O cliente está sem acesso total à internet ou a conexão está apenas lenta/instável?",
+          "yes": {
+            "next": "D2"
+          },
+          "no": {
+            "action": "Orientar sobre lentidão e verificar consumo de banda",
+            "ref": null
+          }
+        },
+        {
+          "id": "D2",
+          "question": "A maquininha de cartão e outros dispositivos estão sem conexão?",
+          "yes": {
+            "next": "D3"
+          },
+          "no": {
+            "action": "Verificar configuração do dispositivo específico do cliente",
+            "ref": null
+          }
+        },
+        {
+          "id": "D3",
+          "question": "O roteador principal está ligado na tomada e com as luzes acesas?",
+          "yes": {
+            "next": "D4"
+          },
+          "no": {
+            "action": "Solicitar que o cliente conecte o roteador à tomada",
+            "ref": null
+          }
+        },
+        {
+          "id": "D4",
+          "question": "A reinicialização física (desligar e ligar da tomada após 10 segundos) resolveu o problema?",
+          "yes": {
+            "action": "Encerrar atendimento com orientações de uso",
+            "ref": null
+          },
+          "no": {
+            "action": "Abrir chamado técnico presencial para verificação da rede externa",
+            "ref": null
+          }
+        }
+      ]
+    },
+    "metrics": {
+      "decisions": 4,
+      "depth": 4,
+      "leaves": 5,
+      "leaves_with_ref": 0,
+      "kb_ids": [],
+      "escalation": false,
+      "violations": [
+        {
+          "rule": "question_not_yes_no",
+          "where": "D1",
+          "detail": "O cliente está sem acesso total à internet ou a conexão está apenas lenta/instável?"
+        }
+      ],
+      "n_violations": 1
+    },
+    "evaluation": null,
+    "rendered": "Fluxo de Suporte para Conexão Instável\n\n[D1] O cliente está sem acesso total à internet ou a conexão está apenas lenta/instável?\n├─ SIM → [D2] A maquininha de cartão e outros dispositivos estão sem conexão?\n│  ├─ SIM → [D3] O roteador principal está ligado na tomada e com as luzes acesas?\n│  │  ├─ SIM → [D4] A reinicialização física (desligar e ligar da tomada após 10 segundos) resolveu o problema?\n│  │  │  ├─ SIM → Encerrar atendimento com orientações de uso. FIM\n│  │  │  └─ NÃO → Abrir chamado técnico presencial para verificação da rede externa. FIM\n│  │  └─ NÃO → Solicitar que o cliente conecte o roteador à tomada. FIM\n│  └─ NÃO → Verificar configuração do dispositivo específico do cliente. FIM\n└─ NÃO → Orientar sobre lentidão e verificar consumo de banda. FIM"
+  },
+  {
+    "kind": "generation",
+    "run_id": "20261123-210034-86e85c",
+    "timestamp": "2026-11-23T21:00:34-03:00",
+    "customer_id": "c04",
+    "customer_profile": {
+      "id": "c04",
+      "name": "Antônio Ferreira",
+      "technical_level": "leigo",
+      "communication_style": "direto",
+      "channel": "chat",
+      "plan": "FIBRA-300",
+      "notes": "Dono de uma pequena padaria; a maquininha de cartão usa o Wi-Fi."
+    },
+    "ticket": {
+      "id": "t01",
+      "text": "minha internet não tá boa, resolve aí por favor"
+    },
+    "content_type": "flow_summary",
+    "prompt_version": "v2",
+    "prompt_layers": {
+      "base": true,
+      "domain": true,
+      "tasks": "v1",
+      "role": null
+    },
+    "template_hash": "0624f654e124263ea8de29c098c3d34f87a971de586ec2fcf4d7aaf5f06020a9",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash-lite",
+    "config": {
+      "temperature": 0.2,
+      "max_output_tokens": 4096
+    },
+    "cache_key": "0bf69a72a09bb698d5e554e29466a383666a3ea0d3da4e004c6b4971e9c7ebe2",
+    "cached": false,
+    "attempts": 1,
+    "provider_retries": 0,
+    "latency_ms": 2333,
+    "output": {
+      "title": "Fluxo de Atendimento - Lentidão/Queda Wi-Fi (Cliente Leigo)",
+      "start": "D1",
+      "nodes": [
+        {
+          "id": "D1",
+          "question": "A internet está sem acesso total ou apenas lenta/caindo?",
+          "yes": {
+            "next": "D2"
+          },
+          "no": {
+            "action": "Verificar luz LOS vermelha na caixinha da fibra (ONT) e realizar reinício conforme PROC-01",
+            "ref": "NET-01"
+          }
+        },
+        {
+          "id": "D2",
+          "question": "O problema afeta a maquininha de cartão ou dispositivos longe do roteador?",
+          "yes": {
+            "next": "D3"
+          },
+          "no": {
+            "action": "Orientar teste de velocidade via cabo ou comparar desempenho no mesmo local",
+            "ref": "SPEED-01"
+          }
+        },
+        {
+          "id": "D3",
+          "question": "O roteador está em local alto, aberto e central?",
+          "yes": {
+            "action": "Verificar congestionamento de canal ou interferência no horário de pico",
+            "ref": "WIFI-02"
+          },
+          "no": {
+            "action": "Orientar reposicionamento da caixinha do Wi-Fi para local alto e aberto",
+            "ref": "WIFI-01"
+          }
+        }
+      ]
+    },
+    "metrics": {
+      "decisions": 3,
+      "depth": 3,
+      "leaves": 4,
+      "leaves_with_ref": 4,
+      "kb_ids": [
+        "NET-01",
+        "PROC-01",
+        "SPEED-01",
+        "WIFI-01",
+        "WIFI-02"
+      ],
+      "escalation": false,
+      "violations": [
+        {
+          "rule": "question_not_yes_no",
+          "where": "D1",
+          "detail": "A internet está sem acesso total ou apenas lenta/caindo?"
+        },
+        {
+          "rule": "question_not_yes_no",
+          "where": "D2",
+          "detail": "O problema afeta a maquininha de cartão ou dispositivos longe do roteador?"
+        }
+      ],
+      "n_violations": 2
+    },
+    "evaluation": null,
+    "rendered": "Fluxo de Atendimento - Lentidão/Queda Wi-Fi (Cliente Leigo)\n\n[D1] A internet está sem acesso total ou apenas lenta/caindo?\n├─ SIM → [D2] O problema afeta a maquininha de cartão ou dispositivos longe do roteador?\n│  ├─ SIM → [D3] O roteador está em local alto, aberto e central?\n│  │  ├─ SIM → Verificar congestionamento de canal ou interferência no horário de pico (WIFI-02). FIM\n│  │  └─ NÃO → Orientar reposicionamento da caixinha do Wi-Fi para local alto e aberto (WIFI-01). FIM\n│  └─ NÃO → Orientar teste de velocidade via cabo ou comparar desempenho no mesmo local (SPEED-01). FIM\n└─ NÃO → Verificar luz LOS vermelha na caixinha da fibra (ONT) e realizar reinício conforme PROC-01 (NET-01). FIM"
+  },
+  {
+    "kind": "generation",
+    "run_id": "20261123-210036-e33a89",
+    "timestamp": "2026-11-23T21:00:36-03:00",
+    "customer_id": "c04",
+    "customer_profile": {
+      "id": "c04",
+      "name": "Antônio Ferreira",
+      "technical_level": "leigo",
+      "communication_style": "direto",
+      "channel": "chat",
+      "plan": "FIBRA-300",
+      "notes": "Dono de uma pequena padaria; a maquininha de cartão usa o Wi-Fi."
+    },
+    "ticket": {
+      "id": "t01",
+      "text": "minha internet não tá boa, resolve aí por favor"
+    },
+    "content_type": "flow_summary",
+    "prompt_version": "v3",
+    "prompt_layers": {
+      "base": true,
+      "domain": true,
+      "tasks": "v3",
+      "role": null
+    },
+    "template_hash": "dd3de0bcb18b4116c13ffe34835e4896fc6317138e54c9ed8ee59b90c5892030",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash-lite",
+    "config": {
+      "temperature": 0.2,
+      "max_output_tokens": 4096
+    },
+    "cache_key": "94bfd3b1980d8dc7f06deaeb1a9d0784cb887c8e497e131ab00ff02dba9459fa",
+    "cached": false,
+    "attempts": 1,
+    "provider_retries": 0,
+    "latency_ms": 1816,
+    "output": {
+      "title": "Diagnóstico de lentidão ou quedas",
+      "start": "D1",
+      "nodes": [
+        {
+          "id": "D1",
+          "question": "A caixinha da fibra está com a luz vermelha acesa?",
+          "yes": {
+            "action": "Escalar para visita técnica",
+            "ref": "ESC-01"
+          },
+          "no": {
+            "next": "D2"
+          }
+        },
+        {
+          "id": "D2",
+          "question": "O problema acontece perto do aparelho do Wi-Fi?",
+          "yes": {
+            "action": "Verificar painel de status de rede",
+            "ref": "NET-01"
+          },
+          "no": {
+            "action": "Orientar reposicionamento do roteador",
+            "ref": "WIFI-01"
+          }
+        }
+      ]
+    },
+    "metrics": {
+      "decisions": 2,
+      "depth": 2,
+      "leaves": 3,
+      "leaves_with_ref": 3,
+      "kb_ids": [
+        "ESC-01",
+        "NET-01",
+        "WIFI-01"
+      ],
+      "escalation": true,
+      "violations": [],
+      "n_violations": 0
+    },
+    "evaluation": null,
+    "rendered": "Diagnóstico de lentidão ou quedas\n\n[D1] A caixinha da fibra está com a luz vermelha acesa?\n├─ SIM → Escalar para visita técnica (ESC-01). FIM\n└─ NÃO → [D2] O problema acontece perto do aparelho do Wi-Fi?\n   ├─ SIM → Verificar painel de status de rede (NET-01). FIM\n   └─ NÃO → Orientar reposicionamento do roteador (WIFI-01). FIM"
+  }
+]

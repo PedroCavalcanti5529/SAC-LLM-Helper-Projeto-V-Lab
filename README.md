@@ -293,7 +293,7 @@ Todos os testes rodam com o provedor fake, sem rede e sem chave, e o CI os execu
 ## Limitações conhecidas
  
 - As métricas de adaptação ao perfil são heurísticas (lista de termos e regex) e cobrem só `resolution_steps`.
-- Só `resolution_steps` foi comparado com modelo real e rubrica. Os outros tipos têm samples do fake.
+- Só `resolution_steps` foi comparado com modelo real **e rubrica**. `clarifying_questions` e `flow_summary` têm saídas reais v1 × v2 × v3 em `samples/`, sem notas; `diagnosis` só tem sample do fake.
 - O passo em forma de pergunta ainda aparece na v2 e na v3: a exceção na regra da base existe, mas é ignorada. A próxima hipótese é levar a regra para a tarefa, com exemplo.
 - O modelo não calcula elegibilidade (ex.: repetidor mesh por plano). O ideal é calcular no código e injetar o resultado pronto.
 - A variância entre execuções do `flash-lite` é alta. As conclusões se apoiam em padrões repetidos, não em uma rodada.

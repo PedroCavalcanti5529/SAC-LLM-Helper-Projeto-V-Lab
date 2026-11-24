@@ -1,0 +1,95 @@
+{
+  "kind": "generation",
+  "run_id": "20261123-210509-60c2a4",
+  "timestamp": "2026-11-23T21:05:09-03:00",
+  "customer_id": "c03",
+  "customer_profile": {
+    "id": "c03",
+    "name": "Juliana Martins",
+    "technical_level": "avancado",
+    "communication_style": "detalhado",
+    "channel": "email",
+    "plan": "FIBRA-1G",
+    "notes": "Desenvolvedora de software. Costuma enviar evidências técnicas (ping, traceroute)."
+  },
+  "ticket": {
+    "id": "t03",
+    "text": "Desde ontem à noite tenho latência alta (80-150 ms, normalmente 8 ms) e ~5% de perda de pacotes para servidores de jogos e para 8.8.8.8. Testei via cabo direto no roteador, mesmo resultado. Traceroute mostra a perda a partir do 2º salto. O LED PON da ONT está verde fixo e o LOS apagado."
+  },
+  "content_type": "flow_summary",
+  "prompt_version": "v3",
+  "prompt_layers": {
+    "base": true,
+    "domain": true,
+    "tasks": "v3",
+    "role": null
+  },
+  "template_hash": "dd3de0bcb18b4116c13ffe34835e4896fc6317138e54c9ed8ee59b90c5892030",
+  "provider": "fake",
+  "model": "fake-model-v1",
+  "config": {
+    "temperature": 0.2,
+    "max_output_tokens": 4096
+  },
+  "cache_key": "7dc3b73c22b1960bb8f95ecda9fa0c0709b3c59eb848ebd7e9dd5078499a9a3b",
+  "cached": false,
+  "attempts": 1,
+  "provider_retries": 0,
+  "latency_ms": 0,
+  "output": {
+    "title": "[FAKE] Triagem de internet instável",
+    "start": "D1",
+    "nodes": [
+      {
+        "id": "D1",
+        "question": "[FAKE] A luz LOS da ONT está vermelha?",
+        "yes": {
+          "action": "Agendar visita técnica",
+          "ref": "ESC-01"
+        },
+        "no": {
+          "next": "D2"
+        }
+      },
+      {
+        "id": "D2",
+        "question": "[FAKE] Reiniciar ONT e roteador resolveu?",
+        "yes": {
+          "action": "Encerrar atendimento",
+          "ref": null
+        },
+        "no": {
+          "next": "D3"
+        }
+      },
+      {
+        "id": "D3",
+        "question": "[FAKE] O problema também acontece no cabo de rede?",
+        "yes": {
+          "action": "Escalar para N2 Rede com as evidências coletadas",
+          "ref": "ESC-02"
+        },
+        "no": {
+          "action": "Orientar ajustes do Wi-Fi",
+          "ref": "WIFI-01"
+        }
+      }
+    ]
+  },
+  "metrics": {
+    "decisions": 3,
+    "depth": 3,
+    "leaves": 4,
+    "leaves_with_ref": 3,
+    "kb_ids": [
+      "ESC-01",
+      "ESC-02",
+      "WIFI-01"
+    ],
+    "escalation": true,
+    "violations": [],
+    "n_violations": 0
+  },
+  "evaluation": null,
+  "rendered": "[FAKE] Triagem de internet instável\n\n[D1] [FAKE] A luz LOS da ONT está vermelha?\n├─ SIM → Agendar visita técnica (ESC-01). FIM\n└─ NÃO → [D2] [FAKE] Reiniciar ONT e roteador resolveu?\n   ├─ SIM → Encerrar atendimento. FIM\n   └─ NÃO → [D3] [FAKE] O problema também acontece no cabo de rede?\n      ├─ SIM → Escalar para N2 Rede com as evidências coletadas (ESC-02). FIM\n      └─ NÃO → Orientar ajustes do Wi-Fi (WIFI-01). FIM"
+}
