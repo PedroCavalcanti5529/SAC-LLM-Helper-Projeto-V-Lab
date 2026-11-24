@@ -7,7 +7,7 @@ Prioridade = pesos da avaliação (40% prompt, 30% código, 20% docs, 10% extras
 
 **Núcleo (concluído):** CLI `support-assistant` com `list`, `generate` e `compare`; 4 tipos de
 conteúdo; ablação v1 → v2 → v3 por manifesto; cache, histórico e rubrica manual; provedor fake e
-Gemini; comparação v1×v2×v3 com Gemini avaliada (`samples/gemini_*`).
+Gemini; comparação v1×v2×v3 com Gemini avaliada (`samples/gemini_resolution_steps_*`) e exemplos reais sem rubrica de `clarifying_questions` e `flow_summary` (`samples/gemini_*`).
 
 **Extras (concluídos):** métricas objetivas com violações por perfil (`metrics.py`); retry do
 provedor com backoff; CI no GitHub Actions; interface web Streamlit (extra `web`); modo público

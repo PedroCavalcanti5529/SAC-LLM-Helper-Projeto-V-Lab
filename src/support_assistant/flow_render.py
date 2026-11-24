@@ -39,12 +39,20 @@ def strip_ref(action: str, ref: str | None) -> str:
     """Remove do texto da ação o id que já está em `ref` (ex.: "Agendar visita (ESC-01)").
 
     Tira o id com parênteses/colchetes e um conector solto antes dele ("conforme ESC-01"),
-    para o id aparecer uma vez só, no lugar padrão "(REF)".
+    para o id aparecer uma vez só, no lugar padrão "(REF)". Se o id está numa lista com outros
+    ids ("(POL-03, ESC-01)"), sai só ele e o separador, e os parênteses continuam balanceados.
     """
     text = action
     if ref:
+        ref_id = re.escape(ref)
+        flags = re.IGNORECASE
+        # Dentro de uma lista entre parênteses/colchetes: "(POL-03, ESC-01)" ou "(ESC-01, POL-03)".
+        text = re.sub(r"\s*[,;/]\s*" + ref_id + r"(?=\s*[\)\]])", "", text, flags=flags)
+        text = re.sub(r"(?<=[\(\[])\s*" + ref_id + r"\s*[,;/]\s*", "", text, flags=flags)
+        # Sozinho: "(ESC-01)", "[ESC-01]" ou solto, com um conector opcional antes.
         connector = r"(?:\s*[,;:\-–]?\s*\b(?:conforme|segundo|via|ver|com base em|de acordo com|por)\b)?"
-        text = re.sub(connector + r"\s*[\(\[]?\s*" + re.escape(ref) + r"\s*[\)\]]?", "", text, flags=re.IGNORECASE)
+        alone = r"(?:\(\s*" + ref_id + r"\s*\)|\[\s*" + ref_id + r"\s*\]|\b" + ref_id + r"\b)"
+        text = re.sub(connector + r"\s*" + alone, "", text, flags=flags)
         text = re.sub(r"\s{2,}", " ", text)
     return text.strip(" .,;:-–")
 

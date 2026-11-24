@@ -1,0 +1,241 @@
+[
+  {
+    "kind": "generation",
+    "run_id": "20261123-210017-d837b5",
+    "timestamp": "2026-11-23T21:00:17-03:00",
+    "customer_id": "c04",
+    "customer_profile": {
+      "id": "c04",
+      "name": "Antônio Ferreira",
+      "technical_level": "leigo",
+      "communication_style": "direto",
+      "channel": "chat",
+      "plan": "FIBRA-300",
+      "notes": "Dono de uma pequena padaria; a maquininha de cartão usa o Wi-Fi."
+    },
+    "ticket": {
+      "id": "t01",
+      "text": "minha internet não tá boa, resolve aí por favor"
+    },
+    "content_type": "clarifying_questions",
+    "prompt_version": "v1",
+    "prompt_layers": {
+      "base": false,
+      "domain": false,
+      "tasks": "v1",
+      "role": "v1/role.md"
+    },
+    "template_hash": "c30415a0fde9ebd6bf71b47788304a148a571caf5c2fdec5122bf7db8a69e735",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash-lite",
+    "config": {
+      "temperature": 0.2,
+      "max_output_tokens": 4096
+    },
+    "cache_key": "4511875922dec5a20b3ca68ded95a22d9c0d9fd27fd1112439f8abb95007b8d0",
+    "cached": false,
+    "attempts": 1,
+    "provider_retries": 1,
+    "latency_ms": 6151,
+    "output": {
+      "already_known": [
+        "Cliente é leigo",
+        "Comunicação direta",
+        "Canal chat",
+        "Plano FIBRA-300",
+        "Dono de padaria com maquininha de cartão no Wi-Fi"
+      ],
+      "questions": [
+        {
+          "priority": 1,
+          "question": "A internet está completamente sem conexão ou apenas muito lenta?",
+          "purpose": "Identificar se há queda total do sinal ou degradação da velocidade."
+        },
+        {
+          "priority": 2,
+          "question": "A maquininha de cartão e os celulares estão sem pegar o Wi-Fi ou é só em um aparelho?",
+          "purpose": "Verificar se o problema afeta todos os dispositivos e a operação da padaria."
+        },
+        {
+          "priority": 3,
+          "question": "As luzes do seu modem de internet estão acesas? Quais cores estão piscando?",
+          "purpose": "Checar o status físico do equipamento para diagnóstico remoto."
+        }
+      ]
+    },
+    "metrics": {
+      "n_questions": 3,
+      "n_already_known": 5,
+      "double_questions": 1,
+      "over_limit": false,
+      "priorities_sequential": true,
+      "kb_ids": [],
+      "violations": [],
+      "n_violations": 0
+    },
+    "evaluation": null
+  },
+  {
+    "kind": "generation",
+    "run_id": "20261123-210023-7713de",
+    "timestamp": "2026-11-23T21:00:23-03:00",
+    "customer_id": "c04",
+    "customer_profile": {
+      "id": "c04",
+      "name": "Antônio Ferreira",
+      "technical_level": "leigo",
+      "communication_style": "direto",
+      "channel": "chat",
+      "plan": "FIBRA-300",
+      "notes": "Dono de uma pequena padaria; a maquininha de cartão usa o Wi-Fi."
+    },
+    "ticket": {
+      "id": "t01",
+      "text": "minha internet não tá boa, resolve aí por favor"
+    },
+    "content_type": "clarifying_questions",
+    "prompt_version": "v2",
+    "prompt_layers": {
+      "base": true,
+      "domain": true,
+      "tasks": "v1",
+      "role": null
+    },
+    "template_hash": "413d906e3539e2794a378c45d6432b4e2be980c8a726238cd7eb8bb8d50e7ff4",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash-lite",
+    "config": {
+      "temperature": 0.2,
+      "max_output_tokens": 4096
+    },
+    "cache_key": "bbcefb302bc42aed0ae0f913a96540834120bade660228fa8f9d1b21227d6874",
+    "cached": false,
+    "attempts": 1,
+    "provider_retries": 0,
+    "latency_ms": 1724,
+    "output": {
+      "already_known": [
+        "Cliente Antônio Ferreira possui o plano FIBRA-300.",
+        "Utiliza a internet em uma pequena padaria, onde a maquininha de cartão usa o Wi-Fi.",
+        "Nível técnico leigo, prefere comunicação direta via chat."
+      ],
+      "questions": [
+        {
+          "priority": 1,
+          "question": "A internet está completamente sem funcionar ou apenas lenta/caindo?",
+          "purpose": "Identificar o sintoma exato entre NET-01, WIFI-01, WIFI-02 ou SPEED-01."
+        },
+        {
+          "priority": 2,
+          "question": "A caixinha da fibra (ONT) está com alguma luz vermelha acesa?",
+          "purpose": "Verificar se há sinal LOS vermelho (ESC-01), indicando problema físico na fibra."
+        },
+        {
+          "priority": 3,
+          "question": "A falha afeta apenas a maquininha de cartão ou também outros aparelhos?",
+          "purpose": "Isolar se o problema é geral ou restrito à rede Wi-Fi do estabelecimento."
+        }
+      ]
+    },
+    "metrics": {
+      "n_questions": 3,
+      "n_already_known": 3,
+      "double_questions": 0,
+      "over_limit": false,
+      "priorities_sequential": true,
+      "kb_ids": [
+        "ESC-01",
+        "NET-01",
+        "SPEED-01",
+        "WIFI-01",
+        "WIFI-02"
+      ],
+      "violations": [],
+      "n_violations": 0
+    },
+    "evaluation": null
+  },
+  {
+    "kind": "generation",
+    "run_id": "20261123-210025-43ed55",
+    "timestamp": "2026-11-23T21:00:25-03:00",
+    "customer_id": "c04",
+    "customer_profile": {
+      "id": "c04",
+      "name": "Antônio Ferreira",
+      "technical_level": "leigo",
+      "communication_style": "direto",
+      "channel": "chat",
+      "plan": "FIBRA-300",
+      "notes": "Dono de uma pequena padaria; a maquininha de cartão usa o Wi-Fi."
+    },
+    "ticket": {
+      "id": "t01",
+      "text": "minha internet não tá boa, resolve aí por favor"
+    },
+    "content_type": "clarifying_questions",
+    "prompt_version": "v3",
+    "prompt_layers": {
+      "base": true,
+      "domain": true,
+      "tasks": "v3",
+      "role": null
+    },
+    "template_hash": "bf17392f0d5a5c0602604b4f8ba3b94c157870ee0920749abaaf3df124b6ff67",
+    "provider": "gemini",
+    "model": "gemini-3.5-flash-lite",
+    "config": {
+      "temperature": 0.2,
+      "max_output_tokens": 4096
+    },
+    "cache_key": "89f2bc0e43b630a3c1cdc64008bcaf5774cbc74f7e9a1c3247cf618989b8847c",
+    "cached": false,
+    "attempts": 1,
+    "provider_retries": 1,
+    "latency_ms": 7125,
+    "output": {
+      "already_known": [
+        "Cliente: Antônio Ferreira",
+        "Nível técnico: leigo",
+        "Estilo: direto",
+        "Canal: chat",
+        "Plano: FIBRA-300",
+        "Sintoma: internet não está boa",
+        "Contexto: dono de padaria, maquininha de cartão usa o Wi-Fi"
+      ],
+      "questions": [
+        {
+          "priority": 1,
+          "question": "A caixinha da fibra está com alguma luzinha vermelha acesa?",
+          "purpose": "Verificar se há rompimento de sinal ou problema externo (ESC-01, EQ-01)"
+        },
+        {
+          "priority": 2,
+          "question": "A internet parou em tudo ou só a maquininha de cartão e o celular que estão sem sinal?",
+          "purpose": "Diferenciar falha total (NET-01) de problema de Wi-Fi ou dispositivos específicos (WIFI-01)"
+        },
+        {
+          "priority": 3,
+          "question": "Isso começou hoje ou já vem acontecendo há alguns dias?",
+          "purpose": "Identificar se é uma falha recente ou recorrente"
+        }
+      ]
+    },
+    "metrics": {
+      "n_questions": 3,
+      "n_already_known": 7,
+      "double_questions": 0,
+      "over_limit": false,
+      "priorities_sequential": true,
+      "kb_ids": [
+        "EQ-01",
+        "ESC-01",
+        "NET-01",
+        "WIFI-01"
+      ],
+      "violations": [],
+      "n_violations": 0
+    },
+    "evaluation": null
+  }
+]

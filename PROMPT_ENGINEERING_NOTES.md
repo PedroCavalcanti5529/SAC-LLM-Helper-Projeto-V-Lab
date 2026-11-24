@@ -196,8 +196,9 @@ v1, editar `prompts/v1/*.md` muda as duas versões.
 
 ## 7. Limitações conhecidas
 
-- **Só `resolution_steps` foi comparado com modelo real e rubrica.** Os outros três tipos têm samples
-  do provedor fake, que mostram o formato, não a qualidade.
+- **Só `resolution_steps` foi comparado com modelo real e rubrica.** `clarifying_questions` (c04 + t01)
+  e `flow_summary` (c04 + t01 e c02 + t04) têm saídas reais v1 × v2 × v3 em `samples/gemini_*`, como
+  exemplos de funcionamento, sem notas. `diagnosis` só tem sample do fake.
 - **A amostra é pequena:** um cenário avaliado pela rubrica, mais as execuções repetidas da seção 5.
   O ideal seria cobrir os 4 tickets × 4 perfis com avaliação às cegas, que a interface web já permite.
 - **A ablação não é fatorial.** Base e domínio entram juntos na v2. Separar os dois exigiria uma versão

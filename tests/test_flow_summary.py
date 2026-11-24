@@ -189,6 +189,9 @@ def test_render_is_deterministic():
         ("Escalar para N2 Rede [esc-02] com evidências", "ESC-02", "Escalar para N2 Rede com evidências"),
         ("ESC-04: escalar para N2 Suporte", "ESC-04", "escalar para N2 Suporte"),
         ("Orientar ajustes do Wi-Fi (WIFI-01)", "ESC-01", "Orientar ajustes do Wi-Fi (WIFI-01)"),  # id diferente fica
+        # id numa lista com outros: sai só ele, os parênteses continuam balanceados (saída real do Gemini)
+        ("Agendar visita técnica, sem custo (POL-03, ESC-01)", "ESC-01", "Agendar visita técnica, sem custo (POL-03)"),
+        ("Agendar visita técnica (ESC-01; POL-03)", "ESC-01", "Agendar visita técnica (POL-03)"),
         ("Encerrar atendimento.", None, "Encerrar atendimento"),
     ],
 )
